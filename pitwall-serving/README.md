@@ -30,6 +30,24 @@ One static page, no build step, no npm in a Java repo. Four things on it:
   aggregates. The page reports how long the query took, which is the point: it is reading
   pre-computed buckets, not raw rows.
 
+### The page is sized to the screen, not to its content
+
+The dashboard is a wall display: `body` is pinned to `100dvh` with `overflow: hidden`, and the
+analysis panel takes whatever height the garage and the controls leave behind. The chart reads its
+lane height from that leftover space rather than reserving a fixed strip, so there is no dead
+rectangle waiting for someone to press a button, and the page never trails off into empty
+background. Below 1040px the document gets its normal scrolling back, because a single column cannot
+fit a phone screen and pinning it there would clip content instead of fitting it.
+
+The chart's share of the shell keeps changing after first paint, as the garage cards fill in and the
+channel picker collapses. That resize is picked up from the existing 400ms render tick rather than a
+`ResizeObserver`: observer callbacks and `requestAnimationFrame` are both throttled in a hidden tab,
+which left the canvas stuck at whatever height it happened to get first.
+
+The breach band keeps its row even when there is nothing to report. It is the one piece of reserved
+empty space on the page, and it buys the thing a two-car comparison needs most: both drivers' dials
+and readouts stay on the same baseline, so the eye can scan straight across.
+
 ### A breach names the channel, it does not colour the frame
 
 Every border on the page is the same neutral hairline, in every state. Turning a card's frame red

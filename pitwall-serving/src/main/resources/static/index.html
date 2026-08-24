@@ -19,10 +19,13 @@
     --grotesque: "Helvetica Neue", "Arial Narrow", Inter, system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
+  html { height: 100%; }
   body {
     margin: 0; background: var(--ink); color: var(--chalk);
     font: 13px/1.5 var(--mono);
     -webkit-font-smoothing: antialiased;
+    height: 100dvh; overflow: hidden;
+    display: flex; flex-direction: column;
   }
   :focus-visible { outline: 2px solid var(--petronas); outline-offset: 2px; }
 
@@ -33,6 +36,7 @@
 
   /* ---- masthead ---- */
   header {
+    flex: 0 0 auto;
     display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
     padding: 12px 20px; border-bottom: 1px solid var(--rule); background: var(--panel);
   }
@@ -52,17 +56,31 @@
   #status.down { color: var(--flag); }
 
   /* ---- shell ---- */
-  main { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; padding: 16px 20px 40px; }
-  @media (max-width: 1040px) { main { grid-template-columns: minmax(0,1fr); } }
-  section { background: var(--panel); border: 1px solid var(--rule); }
+  main {
+    flex: 1 1 auto; min-height: 0;
+    display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; padding: 16px 20px;
+  }
+  .column { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  section { background: var(--panel); border: 1px solid var(--rule); display: flex; flex-direction: column; }
+  .column > section { flex: 0 0 auto; }
+  .column > section.grow { flex: 1 1 auto; min-height: 0; }
   section + section { margin-top: 16px; }
+
+  /* A single column cannot fit a phone screen, so give the document back its scroll. */
+  @media (max-width: 1040px) {
+    body { height: auto; overflow: auto; }
+    main { grid-template-columns: minmax(0,1fr); padding-bottom: 40px; }
+    .column, section, .grow { min-height: auto; flex: 0 0 auto; }
+    .chart-wrap { height: 260px; }
+  }
   section > h2 {
+    flex: 0 0 auto;
     margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--rule);
     font: inherit; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--mist);
   }
 
   /* ---- the garage ---- */
-  .garage { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1px; background: var(--rule); }
+  .garage { flex: 0 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1px; background: var(--rule); }
   .driver { background: var(--panel); padding: 16px; }
   .nameplate { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
   .cap {
@@ -76,7 +94,9 @@
   .breach {
     display: flex; align-items: baseline; gap: 8px; width: 100%;
     background: var(--flag); color: #2b0410; padding: 5px 9px;
+    height: 30px;
   }
+  .breach.clear { background: none; visibility: hidden; }
   .breach b { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
   .breach span { font-size: 11px; font-variant-numeric: tabular-nums; margin-left: auto; }
 
@@ -117,8 +137,9 @@
   input::placeholder { color: var(--mist); }
   button { cursor: pointer; color: var(--petronas); }
   button:hover { background: var(--petronas); color: #04231f; }
-  .picker { padding: 0 14px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 5px; max-height: 96px; overflow-y: auto; padding: 2px 0; }
+  .controls { flex: 0 0 auto; }
+  .picker { flex: 0 0 auto; padding: 0 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 2px 0; }
   .chip {
     background: var(--sunk); border: 1px solid var(--rule); color: var(--mist);
     padding: 3px 9px; font: inherit; font-size: 11px; cursor: pointer;
@@ -126,18 +147,19 @@
   .chip:hover { color: var(--chalk); }
   .chip[aria-pressed="true"] { background: var(--petronas); color: #04231f; font-weight: 600; }
   .picker p { margin: 8px 0 0; }
-  #chart { display: block; width: 100%; height: 120px; }
-  .chart-wrap { padding: 4px 14px 0; }
-  #queryNote { padding: 10px 14px 14px; }
+  #chart { display: block; width: 100%; height: 100%; }
+  .chart-wrap { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 14px 0; }
+  #queryNote { flex: 0 0 auto; padding: 10px 14px 14px; }
 
   /* ---- side ---- */
-  .breaches { max-height: 320px; overflow-y: auto; }
+  .breaches { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   .breaches li { display: block; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
   .breaches ol { margin: 0; padding: 0; list-style: none; }
   .breaches .head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
   .breaches .head b { font: 600 12px/1 var(--grotesque); letter-spacing: .5px; text-transform: uppercase; }
   .breaches .over { color: var(--flag); font-variant-numeric: tabular-nums; }
   .breaches .detail { margin-top: 4px; color: var(--mist); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .strip { flex: 0 0 auto; max-height: 220px; overflow-y: auto; }
   .strip li { display: flex; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
   .strip ol { margin: 0; padding: 0; list-style: none; }
   .strip span:last-child { font-variant-numeric: tabular-nums; }
@@ -158,13 +180,13 @@
 </header>
 
 <main>
-  <div>
+  <div class="column">
     <section>
       <h2>The garage &middot; latest one-second window</h2>
       <div class="garage" id="garage"></div>
     </section>
 
-    <section>
+    <section class="grow">
       <h2>Telemetry analysis &middot; continuous aggregates</h2>
       <div class="controls">
         <select id="carSelect" aria-label="Car"></select>
@@ -172,7 +194,7 @@
           <option value="ONE_MINUTE">1 minute buckets</option>
           <option value="ONE_HOUR">1 hour buckets</option>
         </select>
-        <input id="chipFilter" type="search" placeholder="filter channels" aria-label="Filter channels" size="16">
+        <input id="chipFilter" type="search" placeholder="search channels" aria-label="Search channels" size="16">
         <button id="runQuery" type="button">Plot channels</button>
       </div>
       <div class="picker">
@@ -180,12 +202,12 @@
         <p class="label" id="chipNote"></p>
       </div>
       <div class="chart-wrap"><canvas id="chart"></canvas></div>
-      <p class="label" id="queryNote">Pick up to six channels, then plot.</p>
+      <p class="label" id="queryNote">Loading the aggregates&hellip;</p>
     </section>
   </div>
 
-  <div>
-    <section>
+  <div class="column">
+    <section class="grow">
       <h2>Breaches</h2>
       <div class="breaches" id="breaches"><p class="empty">No channel over threshold.</p></div>
     </section>
@@ -227,6 +249,7 @@ const breaches = new Map();
 let rollupCount = 0, alertCount = 0;
 let selected = [];
 let lastSeries = [];
+let lastChartWrapHeight = 0;
 
 const statusEl = document.getElementById("status");
 const garageEl = document.getElementById("garage");
@@ -298,8 +321,10 @@ function driverCard(carId) {
       <span class="cap">${driver.number}</span>
       <span class="who">${driver.given} <b>${driver.family}</b></span>
       <span class="label plate">${carId}</span>
-      ${breach ? `<span class="breach"><b>Over threshold</b>
-        <span>${breach.sensorId} &nbsp;${breach.observed.toFixed(0)} / ${breach.threshold.toFixed(0)}</span></span>` : ""}
+      ${breach
+        ? `<span class="breach"><b>Over threshold</b>
+             <span>${breach.sensorId} &nbsp;${breach.observed.toFixed(0)} / ${breach.threshold.toFixed(0)}</span></span>`
+        : `<span class="breach clear" aria-hidden="true"></span>`}
     </div>`;
 
   if (!live) {
@@ -355,6 +380,19 @@ function render() {
         const speed = reading(carId, "speed");
         return `<li><span>${carId}</span><span>${speed ? speed.average.toFixed(0) + " km/h" : "&ndash;&ndash;"}</span></li>`;
       }).join("")}</ol>`;
+
+  syncChartHeight();
+}
+
+// The chart's share of the shell changes after first paint as the garage fills
+// in and the picker collapses. Polled off this tick rather than watched with a
+// ResizeObserver: RO and requestAnimationFrame are both throttled in a hidden
+// tab, so the chart would stay stuck at whatever height it was first given.
+function syncChartHeight() {
+  const wrap = document.querySelector(".chart-wrap");
+  if (wrap.clientHeight === lastChartWrapHeight) return;
+  lastChartWrapHeight = wrap.clientHeight;
+  drawChart(lastSeries);
 }
 
 function addBreach(alert) {
@@ -426,34 +464,47 @@ async function loadOptions() {
       selected.push(sensorId);
       chip.setAttribute("aria-pressed", "true");
     }
-    updateChipNote();
+    refreshChips();
   });
 
-  document.getElementById("chipFilter").addEventListener("input", event => {
-    const term = event.target.value.trim().toLowerCase();
-    chipsEl.querySelectorAll(".chip").forEach(chip => {
-      chip.hidden = term !== "" && !chip.dataset.sensor.includes(term);
-    });
-  });
+  document.getElementById("chipFilter").addEventListener("input", refreshChips);
 
   ["speed", "engine-rpm", "brake-pressure"].forEach(sensorId => {
     const chip = chipsEl.querySelector(`[data-sensor="${sensorId}"]`);
     if (chip) { selected.push(sensorId); chip.setAttribute("aria-pressed", "true"); }
   });
-  updateChipNote();
+  refreshChips();
 }
 
-function updateChipNote() {
+// Sixty of the hundred channels are aux-* padding, so listing them all buries
+// the panel. Selected channels stay put; the rest arrive through the search.
+function refreshChips() {
+  const term = document.getElementById("chipFilter").value.trim().toLowerCase();
+  document.querySelectorAll(".chip").forEach(chip => {
+    const isSelected = selected.includes(chip.dataset.sensor);
+    chip.hidden = !isSelected && (term === "" || !chip.dataset.sensor.includes(term));
+  });
+
   const total = document.querySelectorAll(".chip").length;
-  document.getElementById("chipNote").textContent =
-    `${selected.length} of ${total} channels selected, ${MAX_SERIES} at most`;
+  const shown = document.querySelectorAll(".chip:not([hidden])").length;
+  document.getElementById("chipNote").textContent = term === ""
+    ? `${selected.length} of ${total} channels plotted, ${MAX_SERIES} at most. Search to add another.`
+    : `${shown} channel${shown === 1 ? "" : "s"} matching "${term}", ${selected.length} plotted.`;
 }
+
+const MIN_LANE = 34;
 
 function drawChart(series) {
   const canvas = document.getElementById("chart");
   const plotted = series.filter(entry => entry.rows.length > 0);
-  const lane = 58;
-  const height = Math.max(plotted.length, 1) * lane + 8;
+  const count = Math.max(plotted.length, 1);
+
+  // The lane height comes from whatever the shell has left over, so the panel
+  // fills the screen instead of reserving a fixed strip. Below MIN_LANE a trace
+  // is too short to read anything from, so the wrapper scrolls instead.
+  const available = canvas.parentElement.clientHeight - 6;
+  const lane = available > 0 ? Math.max(available / count, MIN_LANE) : 58;
+  const height = Math.max(lane * count, available > 0 ? available : 0);
   canvas.style.height = height + "px";
 
   const ratio = window.devicePixelRatio || 1;
@@ -532,7 +583,7 @@ fetch("/api/v1/live/alerts")
   .then(response => response.json())
   .then(list => list.slice().reverse().forEach(addBreach))
   .catch(() => {});
-loadOptions();
+loadOptions().then(() => { if (selected.length > 0) runQuery(); });
 connect();
 render();
 setInterval(render, 400);
