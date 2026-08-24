@@ -9,6 +9,11 @@ import org.springframework.kafka.config.TopicBuilder;
 public class KafkaTopicConfiguration {
 
     @Bean
+    NewTopic telemetryEventsTopic(ProcessorProperties properties) {
+        return TopicBuilder.name(properties.topic()).partitions(12).replicas(1).build();
+    }
+
+    @Bean
     NewTopic telemetryRollupsTopic(ProcessorProperties properties) {
         return TopicBuilder.name(properties.rollup().topic()).partitions(12).replicas(1).build();
     }

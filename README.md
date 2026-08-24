@@ -277,7 +277,7 @@ curl -s localhost:8081/api/v1/source/status   # actualEventsPerSecond should be 
 | `status` | Each service: running, port, pid, and whether it answers health. Then container status. |
 | `logs` | Tails all three logs at once |
 | `logs <service>` | Tails one: `source`, `processor`, `serving` |
-| `reset` | Stops everything, clears the Kafka topics and all Kafka Streams state, recreates the topics empty |
+| `reset` | Stops everything, clears the Kafka topics and all Kafka Streams state |
 | `help` | The same list, from the script |
 
 ```bash
@@ -308,8 +308,9 @@ without loss.
 always want them for the next run. Use `stop --all` when you actually want the ports back.
 
 **`reset` does not touch your data.** It wipes the three Kafka topics, the Kafka Streams internal
-topics, and the Streams state directory, then recreates the three topics empty and tells you so.
-`telemetry_event` rows are kept; truncate manually if you want a clean store.
+topics, and the Streams state directory, then tells you so. The services recreate the topics they
+declare on the next start. `telemetry_event` rows are kept; truncate manually if you want a clean
+store.
 
 You need `reset` after **changing the wire format**. Kafka Streams keeps internal repartition topics,
 and if they still hold JSON when the app restarts expecting Protobuf, the deserializer fails hard and
@@ -325,10 +326,12 @@ Two things in `reset` are less obvious than they look, and both were bugs before
   changelogs in place, and the next start flushed *hours-old windows* into `telemetry.rollups` where
   they arrived looking exactly like live data. `reset` now verifies no `pitwall-rollups-*` topic
   survived rather than trusting the exit code.
-- **The topics are recreated empty.** Only `pitwall-source` declares `telemetry.events`, and the
-  processor starts first. Left to itself, its Streams client rebalances against a source topic that
-  does not exist yet and shuts down permanently with `MissingSourceTopicException`: the service stays
-  healthy, the raw writes keep working, and rollups never appear.
+- **The processor declares `telemetry.events` as well as the source.** It consumes that topic but
+  starts before the source, so when only the source declared it, a reset left the processor's Streams
+  client rebalancing against a topic that did not exist yet and shutting down permanently with
+  `MissingSourceTopicException`. That fails quietly in the worst way: the service stays healthy, raw
+  writes keep landing, and rollups simply never appear. `KafkaAdmin` creates declared topics before
+  the Streams lifecycle starts, so declaring it in both places closes the window.
 
 ### Where things live
 

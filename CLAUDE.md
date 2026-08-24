@@ -143,6 +143,10 @@ containerised. Without compose running, start the source on the logging sink:
 - **Custom Kafka factories must honour `KafkaConnectionDetails`.** Building a `ProducerFactory` or
   `ConsumerFactory` from `KafkaProperties` alone silently ignores `@ServiceConnection`, so
   Testcontainers tests talk to `localhost:9092` instead of the container.
+- **Every service declares the topics it uses**, including ones another service also declares.
+  `telemetry.events` is declared by both the source and the processor: the processor starts first and
+  its Streams client shuts down for good on a missing source topic, so it cannot wait for the source
+  to create it. Partition counts must agree across declarations.
 - **The naive path stays in the repo.** `pitwall-source`'s `database` sink writes one row per event
   straight to Postgres. It is the control group for the load story, not dead code.
 - **`telemetry_event` is keyed on natural identity** `(car_id, sensor_id, event_time)`, which is the

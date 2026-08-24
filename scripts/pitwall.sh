@@ -186,16 +186,6 @@ cmd_reset() {
   done
   rm -rf "$STREAMS_STATE_DIR"
 
-  # Recreated here rather than left to the services. Only pitwall-source declares
-  # telemetry.events, but the processor starts first, and its Streams client meets
-  # a missing source topic at rebalance and shuts the client down for good
-  # (MissingSourceTopicException). Partition counts match the NewTopic beans.
-  for spec in telemetry.events:12 telemetry.rollups:12 telemetry.alerts:3; do
-    docker exec pitwall-kafka /opt/kafka/bin/kafka-topics.sh \
-      --bootstrap-server localhost:9092 --create --if-not-exists \
-      --topic "${spec%:*}" --partitions "${spec#*:}" --replication-factor 1 >/dev/null 2>&1 || true
-  done
-
   # Verified rather than trusted: a surviving suppress-state-store changelog
   # replays old windows into telemetry.rollups on the next start, and they arrive
   # looking exactly like live data.
@@ -207,7 +197,7 @@ cmd_reset() {
     die "$leftover Kafka Streams internal topics survived the reset"
   fi
 
-  ok "topics recreated empty, Streams internal topics and state cleared"
+  ok "application topics, Streams internal topics, and Streams state all cleared"
   warn "telemetry_event rows are kept; truncate manually if you want a clean store"
 }
 
