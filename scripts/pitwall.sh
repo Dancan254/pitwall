@@ -172,14 +172,42 @@ cmd_logs() {
 cmd_reset() {
   cmd_stop
   step "Clearing Kafka topics and Streams state"
+
+  # Before the application topics, so the tool can still resolve them, and with
+  # --force because stopping the services does not expire the consumer group
+  # members straight away and the tool refuses while the group has any.
+  local reset_output
+  reset_output=$(docker exec pitwall-kafka /opt/kafka/bin/kafka-streams-application-reset.sh \
+    --bootstrap-server localhost:9092 --application-id pitwall-rollups --force 2>&1) || true
+
   for topic in telemetry.events telemetry.rollups telemetry.alerts; do
     docker exec pitwall-kafka /opt/kafka/bin/kafka-topics.sh \
       --bootstrap-server localhost:9092 --delete --topic "$topic" >/dev/null 2>&1 || true
   done
-  docker exec pitwall-kafka /opt/kafka/bin/kafka-streams-application-reset.sh \
-    --bootstrap-server localhost:9092 --application-id pitwall-rollups >/dev/null 2>&1 || true
   rm -rf "$STREAMS_STATE_DIR"
-  ok "topics deleted, Streams state cleared"
+
+  # Recreated here rather than left to the services. Only pitwall-source declares
+  # telemetry.events, but the processor starts first, and its Streams client meets
+  # a missing source topic at rebalance and shuts the client down for good
+  # (MissingSourceTopicException). Partition counts match the NewTopic beans.
+  for spec in telemetry.events:12 telemetry.rollups:12 telemetry.alerts:3; do
+    docker exec pitwall-kafka /opt/kafka/bin/kafka-topics.sh \
+      --bootstrap-server localhost:9092 --create --if-not-exists \
+      --topic "${spec%:*}" --partitions "${spec#*:}" --replication-factor 1 >/dev/null 2>&1 || true
+  done
+
+  # Verified rather than trusted: a surviving suppress-state-store changelog
+  # replays old windows into telemetry.rollups on the next start, and they arrive
+  # looking exactly like live data.
+  local leftover
+  leftover=$(docker exec pitwall-kafka /opt/kafka/bin/kafka-topics.sh \
+    --bootstrap-server localhost:9092 --list 2>/dev/null | grep -c '^pitwall-rollups-' || true)
+  if (( leftover > 0 )); then
+    say "$reset_output" >&2
+    die "$leftover Kafka Streams internal topics survived the reset"
+  fi
+
+  ok "topics recreated empty, Streams internal topics and state cleared"
   warn "telemetry_event rows are kept; truncate manually if you want a clean store"
 }
 

@@ -277,7 +277,7 @@ curl -s localhost:8081/api/v1/source/status   # actualEventsPerSecond should be 
 | `status` | Each service: running, port, pid, and whether it answers health. Then container status. |
 | `logs` | Tails all three logs at once |
 | `logs <service>` | Tails one: `source`, `processor`, `serving` |
-| `reset` | Stops everything, deletes the three Kafka topics, resets Kafka Streams state |
+| `reset` | Stops everything, clears the Kafka topics and all Kafka Streams state, recreates the topics empty |
 | `help` | The same list, from the script |
 
 ```bash
@@ -307,14 +307,28 @@ without loss.
 **`stop` leaves the containers running.** Kafka and TimescaleDB are slow to come back and you almost
 always want them for the next run. Use `stop --all` when you actually want the ports back.
 
-**`reset` does not touch your data.** It wipes the three Kafka topics and the Kafka Streams state
-directory, then tells you so. `telemetry_event` rows are kept; truncate manually if you want a clean
-store.
+**`reset` does not touch your data.** It wipes the three Kafka topics, the Kafka Streams internal
+topics, and the Streams state directory, then recreates the three topics empty and tells you so.
+`telemetry_event` rows are kept; truncate manually if you want a clean store.
 
 You need `reset` after **changing the wire format**. Kafka Streams keeps internal repartition topics,
 and if they still hold JSON when the app restarts expecting Protobuf, the deserializer fails hard and
-kills the Streams client with `Not a valid TelemetryEventMessage`. Deleting the topics is not enough
-on its own; the state directory has to go too, which is what `reset` handles.
+kills the Streams client with `Not a valid TelemetryEventMessage`. Deleting the three application
+topics is not enough on its own: the state directory has to go, and so do the Streams internal
+topics, which is what `reset` handles.
+
+Two things in `reset` are less obvious than they look, and both were bugs before they were features:
+
+- **The Streams reset runs with `--force`.** Stopping the services does not expire the consumer group
+  members immediately, so `kafka-streams-application-reset.sh` refuses with `Consumer group
+  'pitwall-rollups' is still active`. That failure used to be swallowed, leaving the suppress-state
+  changelogs in place, and the next start flushed *hours-old windows* into `telemetry.rollups` where
+  they arrived looking exactly like live data. `reset` now verifies no `pitwall-rollups-*` topic
+  survived rather than trusting the exit code.
+- **The topics are recreated empty.** Only `pitwall-source` declares `telemetry.events`, and the
+  processor starts first. Left to itself, its Streams client rebalances against a source topic that
+  does not exist yet and shuts down permanently with `MissingSourceTopicException`: the service stays
+  healthy, the raw writes keep working, and rollups never appear.
 
 ### Where things live
 
