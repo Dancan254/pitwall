@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: pitwall
+    type: file
+    allowUiUpdates: true
+    options:
+      path: /otel-lgtm/dashboards
+      foldersFromFilesStructure: false
