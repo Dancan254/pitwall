@@ -19,9 +19,9 @@ Then open **http://localhost:8083**.
 One static page, no build step, no npm in a Java repo. Four things on it:
 
 - **The garage**: the two Mercedes cars in full, driven by the latest 1-second rollup per channel.
-  Radial dials for `speed` and `engine-rpm`, a gear readout, throttle and brake bars, and running
-  average and peak speed accumulated from the rollup stream. A car whose channel has breached a
-  threshold turns the card and its dials to the alert colour.
+  Radial dials for `speed` and `engine-rpm` printed with their scale, a gear readout, throttle and
+  brake bars, and running average and top speed accumulated from the rollup stream. A car the source
+  has gone quiet on says `No signal` rather than showing a stale reading.
 - **Rest of the grid**: every other car as one line, current speed only. The demo is about the
   Mercedes garage; the other cars are there to show the pipeline is carrying all of them.
 - **Alerts**: threshold breaches as they fire, newest first, backfilled on load from
@@ -29,6 +29,17 @@ One static page, no build step, no npm in a Java repo. Four things on it:
 - **Telemetry analysis**: pick a car, a resolution, and up to six channels, then query the continuous
   aggregates. The page reports how long the query took, which is the point: it is reading
   pre-computed buckets, not raw rows.
+
+### A breach names the channel, it does not colour the frame
+
+Every border on the page is the same neutral hairline, in every state. Turning a card's frame red
+says only that something on that car is wrong; the engineer still has to hunt for what. So the breach
+signal sits on the data instead: a band across the driver's nameplate carrying the channel id and
+`observed / threshold`, and the affected readout turns to the alert colour. The dial arc for a
+breached channel turns with it.
+
+Breaches expire 30 seconds after the last alert for that car. A breach is an event, not a permanent
+property, and a card that stays marked forever after one transient spike stops meaning anything.
 
 ### Driver names are a display mapping, nothing more
 
