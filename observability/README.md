@@ -69,6 +69,99 @@ hand, and at telemetry volumes the log stream needs a plan of its own.
 | **Dropout buffer and sink failures** | What the fault injection is doing |
 | **Rollups, alerts, and dashboard subscribers** | The serving side |
 
+## Watching it in Grafana
+
+Grafana is at **http://localhost:3000** with anonymous viewer access, so there is nothing to log into.
+The dashboard is provisioned at a fixed URL, which beats hunting through the dashboard list:
+
+```
+http://localhost:3000/d/pitwall-pipeline
+```
+
+Set the time picker to **Last 15 minutes** and refresh to **5s**. Metrics arrive over OTLP every 5
+seconds, so a panel needs two or three points before it draws a line. A dashboard opened in the first
+ten seconds of a run looks broken and is not.
+
+### What Grafana can and cannot show you
+
+Worth getting straight before you go looking for something that is not there. Grafana holds **metrics
+about the pipeline**, not the telemetry flowing through it:
+
+| Question | Where the answer is |
+|---|---|
+| Is the consumer keeping up? | Grafana, **consumer lag** |
+| How many events per second are produced, consumed, written? | Grafana, **throughput** |
+| How many duplicate readings did the natural key reject? | Grafana, **correctness** |
+| How late was the latest reading to arrive? | Grafana, `kafka_stream_task_record_lateness_max` |
+| What is CAR-01 doing right now? | The pit wall, http://localhost:8083 |
+| What did CAR-01's brake temperature read at 14:32? | The query API, or `psql` |
+
+There is no panel that shows an individual reading, and no query you can write to get one. Logs are
+not exported (see **Signals** above) and traces are HTTP control-plane spans, not data. Individual
+readings live in `telemetry_event` and reach the browser over SSE; they never reach Grafana.
+
+### A run worth watching
+
+Each of these changes something you can see on the dashboard within about ten seconds.
+
+**1. Steady state.** Start on the default profile and let it settle:
+
+```bash
+./scripts/pitwall.sh start
+```
+
+Consumer lag falls to zero and stays flat. Throughput shows produced, consumed, and written sitting
+on top of each other. That flat zero is the shape everything else is measured against.
+
+**2. Outrun the writer.** Push the source past the consumer's write ceiling:
+
+```bash
+curl -X PUT localhost:8081/api/v1/source/load -H 'Content-Type: application/json' \
+     -d '{"cars":20,"sensorsPerCar":100,"rateScale":1.0}'
+```
+
+Produced climbs immediately; written does not follow. **Consumer lag leaves zero and keeps climbing.**
+Nothing errors and nothing is lost, which is the point: Kafka absorbs the difference and the backlog
+is visible instead of silent.
+
+**3. Break the naive path.** Point the generator straight at Postgres:
+
+```bash
+curl -X PUT localhost:8081/api/v1/source/sink -H 'Content-Type: application/json' \
+     -d '{"name":"database"}'
+```
+
+Watch **source load dial: target vs actual** separate. The target stays where you set it and the
+actual collapses, because the connection pool makes the emitter threads queue. Put it back with
+`{"name":"kafka"}` and the two lines rejoin.
+
+**4. Lose the radio link, then replay it.**
+
+```bash
+curl -X PUT localhost:8081/api/v1/source/faults/dropout -H 'Content-Type: application/json' \
+     -d '{"active":true}'
+curl -X POST localhost:8081/api/v1/source/faults/replay
+```
+
+**Correctness: duplicates rejected and late data dropped** is the panel to have open. The duplicate
+counter climbs, because the natural key rejected replayed rows the store already had. If the replayed
+readings landed outside their window's grace period, `dropped-records` climbs too, and those readings
+are gone from the aggregates while the raw table stays perfectly correct. Two counters, two different
+correctness problems.
+
+### When a panel is empty
+
+- **Every panel empty, no error.** Almost always a provisioning problem rather than a data problem.
+  Check the panel carries `fieldConfig.defaults.color`, `mappings`, and `thresholds`; without them
+  Grafana renders an empty canvas silently.
+- **One panel empty.** Check the metric name in Prometheus directly, remembering that OTLP renames
+  things (see below). The datasource proxy answers without leaving the terminal:
+  ```bash
+  curl -s 'http://localhost:3000/api/datasources/proxy/uid/prometheus/api/v1/query?query=pitwall_processor_events_consumed_total' | jq '.data.result | length'
+  ```
+- **Everything empty and the services are running.** Confirm the service is exporting at all:
+  `curl -s localhost:8082/actuator/metrics | jq '.names | map(select(startswith("pitwall")))'`.
+
 ## The load story
 
 Measured on the development machine, 6 cars x 25 channels:
