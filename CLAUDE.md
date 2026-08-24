@@ -1,7 +1,7 @@
 # Pitwall
 
 ## What this is
-A high-throughput F1 telemetry ingestion platform — a reference implementation of real-time,
+A high-throughput F1 telemetry ingestion platform: a reference implementation of real-time,
 high-cardinality time-series ingestion (the same shape as vehicle telemetry, QoE monitoring, and
 observability pipelines). Full architecture: `pitwall-architecture.md`. How real F1 telemetry is transmitted, with sources and
 the numbers the simulator is calibrated against: `docs/how-f1-transmits-telemetry.md`.
@@ -10,14 +10,14 @@ All four modules are built: `pitwall-commons`, `pitwall-source`, `pitwall-stream
 `pitwall-serving`, plus Prometheus and Grafana under `observability/`.
 
 ## What it is NOT
-- Not a production UI — the serving layer only proves the data is live.
+- Not a production UI. The serving layer only proves the data is live.
 - No multi-region replication / DR, no auth / tenancy / billing.
-- No exactly-once via Kafka transactions — deliberately at-least-once + idempotency.
+- No exactly-once via Kafka transactions. Deliberately at-least-once + idempotency.
 
 ## Module layout
 ```
 pitwall/                        parent pom (packaging=pom)
-├── pitwall-commons             shared library (jar) — cross-cutting contract and conventions
+├── pitwall-commons             shared library (jar): cross-cutting contract and conventions
 │   └── com.yourjavaguy.pitwall.commons
 │       ├── event/              TelemetryEvent (shared contract, Java record)
 │       ├── exception/          BaseException, ResourceNotFoundException, GlobalExceptionHandler
@@ -51,7 +51,7 @@ pitwall/                        parent pom (packaging=pom)
         ├── live/               LiveFeed (SSE fan-out), AlertHistory, TelemetryStreamConsumer
         ├── query/              TelemetryRollupRepository, TelemetryQueryService, Resolution
         └── web/                LiveFeedController, TelemetryQueryController
-            resources/static/   index.html — the dashboard, no build step
+            resources/static/   index.html: the dashboard, no build step
 ```
 
 Module details: `pitwall-source/README.md`, `pitwall-stream-processor/README.md`,
@@ -66,8 +66,8 @@ Module details: `pitwall-source/README.md`, `pitwall-stream-processor/README.md`
 
 ## Follow-ups
 - **Protobuf + Schema Registry** is the platform's wire format (`TelemetryEvent` is a plain record for
-  now). When building `pitwall-source`/`pitwall-stream-processor`, add the `.proto` schema and codegen —
-  decide then whether the schema lives in commons or a dedicated `pitwall-schema` module.
+  now). When building `pitwall-source`/`pitwall-stream-processor`, add the `.proto` schema and
+  codegen, then decide whether the schema lives in commons or a dedicated `pitwall-schema` module.
 
 ## Per-service config baseline
 Each bootable service (source/processor/serving) should set, in its own `application.yml`:
@@ -83,7 +83,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics      # no prometheus — export is OTLP, nothing scrapes
+        include: health,info,metrics      # no prometheus; export is OTLP, nothing scrapes
   endpoint:
     health:
       show-details: when-authorized
@@ -147,7 +147,7 @@ containerised. Without compose running, start the source on the logging sink:
   straight to Postgres. It is the control group for the load story, not dead code.
 - **`telemetry_event` is keyed on natural identity** `(car_id, sensor_id, event_time)`, which is the
   primary key. Writes are `on conflict do nothing`, so an at-least-once replay is a no-op rather than
-  a double-count. The `V1` surrogate `bigserial id` was dropped in `V2` — it identified a row, not a
+  a double-count. The `V1` surrogate `bigserial id` was dropped in `V2`; it identified a row, not a
   reading.
 - **Kafka serializers are the Jackson 3 variants** (`JacksonJsonSerializer` / `JacksonJsonDeserializer`).
   The Jackson 2 `JsonSerializer` classes are still on the classpath and will fail on `Instant`.
@@ -157,7 +157,7 @@ containerised. Without compose running, start the source on the logging sink:
   produce, or replayed readings are silently dropped from the rollups while the raw table stays
   correct.
 - **Rollups and alerts live on Kafka topics only** (`telemetry.rollups`, `telemetry.alerts`). They are
-  deliberately not persisted — TimescaleDB continuous aggregates own historical rollups in the next
+  deliberately not persisted, because TimescaleDB continuous aggregates own historical rollups in the next
   slice, and a table here would be thrown away.
 - **`TelemetryRollup` / `TelemetryAlert` live in the processor**, not commons. Move them to commons
   when `pitwall-serving` needs to consume them.
@@ -170,27 +170,27 @@ containerised. Without compose running, start the source on the logging sink:
   than plain Postgres here. The wins are chunk exclusion on time-bounded queries, per-chunk
   compression (26x measured), and retention as a chunk drop. Query speed comes from the continuous
   aggregates (~100x measured).
-- **Continuous aggregate migrations cannot run in a transaction** — `V4` has a companion
+- **Continuous aggregate migrations cannot run in a transaction.** `V4` has a companion
   `V4__....sql.conf` with `executeInTransaction=false`. `add_columnstore_policy` is a procedure in
   TimescaleDB 2.29 and needs `call`, not `select`.
 - **Integration tests run against the TimescaleDB image**, not `postgres:18-alpine`, because the
   migrations need the extension.
 - **`TelemetryRollup` and `TelemetryAlert` live in commons** now that serving consumes them.
-  `RollupAccumulator` stays in the processor — it is topology internals, not a contract.
+  `RollupAccumulator` stays in the processor; it is topology internals, not a contract.
 - **Live push is SSE, not WebSocket.** The feed is one-way, so a return channel would be unused.
   `GlobalExceptionHandler` has a dedicated no-body handler for `AsyncRequestNotUsableException`,
   because a browser closing a stream is normal and must not be turned into a 500.
 - **Observability is OTLP only.** `spring-boot-starter-opentelemetry` in every bootable service
   exporting to one `grafana/otel-lgtm` container. No Prometheus registry, no scrape config, and no
-  custom observability beans — the old commons `ObservabilityAutoConfiguration` was deleted because
+  custom observability beans. The old commons `ObservabilityAutoConfiguration` was deleted because
   OTel carries `service_name` from `spring.application.name` already.
 - **Set `management.tracing.sampling.probability` explicitly** in every service; it defaults to 0.1.
   Scheduled tasks are excluded from tracing via
-  `management.observations.enable."[tasks.scheduled.execution]": false` — the bracket quoting is
+  `management.observations.enable."[tasks.scheduled.execution]": false`. The bracket quoting is
   required or Spring mangles the dotted map key, and without it the metric samplers produce most of
   the spans.
 - **OTLP renames things.** Timers export in milliseconds and client-side percentiles arrive as a
-  `quantile` label, not histogram buckets — `histogram_quantile()` does not apply. See
+  `quantile` label, not histogram buckets, so `histogram_quantile()` does not apply. See
   `observability/README.md`.
 - **Grafana panels need `fieldConfig.defaults.color`, `mappings`, and `thresholds`** or the dashboard
   renders completely empty with no error.

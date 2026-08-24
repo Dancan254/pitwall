@@ -1,6 +1,6 @@
 # Observability
 
-All three services export **OTLP** to a single `grafana/otel-lgtm` container — Grafana, Prometheus,
+All three services export **OTLP** to a single `grafana/otel-lgtm` container: Grafana, Prometheus,
 Tempo and Loki in one image. There is no scrape config, no Prometheus registry, and no custom
 observability code in the project.
 
@@ -9,10 +9,10 @@ observability code in the project.
 | Grafana | http://localhost:3000 (anonymous viewer, or `admin` / `pitwall`) |
 | OTLP HTTP | `localhost:4328` |
 | OTLP gRPC | `localhost:4327` |
-| Dashboard | **Pitwall — telemetry pipeline** |
+| Dashboard | **Pitwall: telemetry pipeline** |
 
 OTLP is published on **4328/4327**, not the usual 4318/4317, to stay out of the way of other local
-LGTM containers — the same reason Postgres sits on 5434.
+LGTM containers, the same reason Postgres sits on 5434.
 
 ## How it is wired
 
@@ -44,12 +44,12 @@ management:
 ```
 
 **Sampling is set explicitly in every service**, because it defaults to `0.1` and silently discards
-90% of traces. The processor runs at `0.05` — it has Kafka listener observation on, so a span per poll
+90% of traces. The processor runs at `0.05`, because it has Kafka listener observation on, so a span per poll
 at full sampling would be a lot of noise for very little signal. Source and serving run at `1.0`;
 their spans are HTTP control-plane calls and there are few of them.
 
 **Scheduled tasks are excluded from tracing.** The metric samplers run once a second in every service,
-and before this was set they produced ~90% of all spans — real HTTP work was buried. The map key needs
+and before this was set they produced ~90% of all spans, burying the real HTTP work. The map key needs
 bracket quoting in YAML or Spring's relaxed binding mangles the dots.
 
 ## Signals
@@ -61,11 +61,11 @@ hand, and at telemetry volumes the log stream needs a plan of its own.
 
 | Panel | What it proves |
 |---|---|
-| **Consumer lag — the heartbeat** | Whether the consumer group is keeping pace. The single most important number. |
-| **Throughput — produced vs consumed vs written** | Where the pipeline narrows |
-| **Source load dial — target vs actual** | Whether the generator is hitting the rate you asked for |
+| **Consumer lag: the heartbeat** | Whether the consumer group is keeping pace. The single most important number. |
+| **Throughput: produced vs consumed vs written** | Where the pipeline narrows |
+| **Source load dial: target vs actual** | Whether the generator is hitting the rate you asked for |
 | **Write latency per batch** | p50/p95/p99 into the store |
-| **Correctness — duplicates rejected and late data dropped** | Idempotency and watermarks, as live counters |
+| **Correctness: duplicates rejected and late data dropped** | Idempotency and watermarks, as live counters |
 | **Dropout buffer and sink failures** | What the fault injection is doing |
 | **Rollups, alerts, and dashboard subscribers** | The serving side |
 
@@ -104,7 +104,7 @@ Prometheus registry did:
 
 ## Gotchas found while wiring this up
 
-- The `grafana/otel-lgtm` image has `curl` but **no `wget`** — a `wget`-based healthcheck reports
+- The `grafana/otel-lgtm` image has `curl` but **no `wget`**, so a `wget`-based healthcheck reports
   unhealthy forever while the container is perfectly fine.
 - Grafana renders **nothing** if a provisioned dashboard's panels omit `fieldConfig.defaults.color`,
   `mappings`, and `thresholds`. No error, no console warning, just an empty canvas.

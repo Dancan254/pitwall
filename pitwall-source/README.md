@@ -35,7 +35,7 @@ Three implementations of `TelemetrySink`, chosen by `pitwall.source.sink` and sw
 | `database` | One synchronous `INSERT` per event, straight to Postgres | The naive path, kept so it can be broken on purpose |
 | `logging` | Samples one event in `log-sample-interval` to the log | Runs with no infrastructure at all |
 
-`kafka` is the default. The `database` sink is not a mistake left in the repo — it is the control
+`kafka` is the default. The `database` sink is not a mistake left in the repo; it is the control
 group. Point the generator at it, turn the dial up, and watch the connection pool exhaust and
 throughput collapse. Every architectural decision downstream traces back to that failure.
 
@@ -54,7 +54,7 @@ watch -n1 'curl -s localhost:8081/api/v1/source/status'
 | `database` | 232,600 | 0 – 1,441, erratic | 0 |
 
 A **221× collapse**, and the most interesting part is that nothing errors. Hikari does not reject the
-work, it makes the emitter threads queue for a connection — so the generator is dragged down to the
+work, it makes the emitter threads queue for a connection, so the generator is dragged down to the
 speed of the database instead of failing loudly. A fast producer wired straight to a slower consumer
 does not break; it silently becomes as slow as the slowest part. That is what a log in the middle
 buys you, and switching the sink back to `kafka` returns the generator to ~213,000 events/sec
@@ -64,7 +64,7 @@ immediately.
 
 Producer is tuned for throughput, not for the smallest possible latency: `acks=all`, lz4 compression,
 64 KB batches, and `linger.ms=20` so records accumulate before a send. Records are keyed by `carId`,
-which is what buys per-car ordering and parallelism at once — and what makes hot partitions possible
+which is what buys per-car ordering and parallelism at once, and what makes hot partitions possible
 if one car dominates.
 
 The wire format is JSON for now. That is deliberate: Protobuf lands next, and switching with the
@@ -111,12 +111,12 @@ The dropout buffers events instead of publishing them, and drops them once the b
 replay drains the buffer **and re-sends the last `overlap-size` events that were already delivered**,
 so the downstream consumer receives genuine duplicates and out-of-order data. The consumer keys every
 write on `(car_id, sensor_id, event_time)`, so those duplicates land as no-ops rather than
-double-counts — see `pitwall-stream-processor/README.md`.
+double-counts; see `pitwall-stream-processor/README.md`.
 
 ## Metrics
 
 Exported over OTLP to `grafana/otel-lgtm` every 5s, and readable locally on
-`/actuator/metrics`. There is no `/actuator/prometheus` — this platform does not carry a
+`/actuator/metrics`. There is no `/actuator/prometheus`, because this platform does not carry a
 Prometheus registry, and nothing scrapes it. Names below are the Micrometer names; see
 [`observability/README.md`](../observability/README.md) for how OTLP renames them in Grafana.
 
@@ -131,5 +131,5 @@ Prometheus registry, and nothing scrapes it. Names below are the Micrometer name
 | `pitwall.source.rate.actual` | What is actually being published, sampled every second |
 | `pitwall.source.buffer.depth` | Events currently buffered |
 
-Target and actual are separate on purpose. The generator never catches up on missed ticks — under
+Target and actual are separate on purpose. The generator never catches up on missed ticks: under
 pressure it just runs slower, and the gap between the two is the honest signal.

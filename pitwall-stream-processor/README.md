@@ -1,7 +1,7 @@
 # pitwall-stream-processor
 
 The consumer. Reads `telemetry.events` from Kafka in batches and writes them into Postgres with
-batched JDBC inserts. Owns the schema — Flyway migrations live here, and no other service creates
+batched JDBC inserts. Owns the schema: Flyway migrations live here, and no other service creates
 tables.
 
 ## Run
@@ -16,6 +16,19 @@ Listens on `8082`. Flyway applies `db/migration` at startup. Postgres is publish
 
 ## How it keeps up
 
+```mermaid
+flowchart TB
+    K(["<b>telemetry.events</b><br/>12 partitions"])
+    L["<b>@KafkaListener</b> (batch)<br/>concurrency 6<br/>max.poll.records 2000"]
+    I["<b>TelemetryIngestService</b><br/>splits the poll"]
+    B["JDBC batch, 500 rows<br/>(one round trip each)"]
+    DB[("<b>telemetry_event</b><br/>on conflict do nothing")]
+    A["offsets committed<br/>after the listener returns"]
+
+    K --> L --> I --> B --> DB --> A
+    A -.->|"crash before this<br/>replays the batch"| K
+```
+
 Three settings do most of the work, and each one is a decision worth being able to defend:
 
 | Setting | Value | Why |
@@ -26,13 +39,13 @@ Three settings do most of the work, and each one is a decision worth being able 
 | `pitwall.processor.write-batch-size` | 500 | One JDBC round trip per 500 rows instead of per row |
 
 `ack-mode: batch` commits offsets after the listener returns, which is **at-least-once**: a crash
-between the write and the commit replays the batch. That is the intended semantic — slice 3 makes the
-writes idempotent so a replay stops mattering.
+between the write and the commit replays the batch. That is the intended semantic; slice 3 makes
+the writes idempotent so a replay stops mattering.
 
 ## Idempotency: why replay is harmless
 
 `ack-mode: batch` gives at-least-once delivery, and the source can replay a dropout burst on demand.
-Both mean the same event will arrive more than once. The fix is not to prevent that — it is to make
+Both mean the same event will arrive more than once. The fix is not to prevent that; it is to make
 a second arrival a no-op.
 
 Every write is keyed on the reading's **natural identity**, `(car_id, sensor_id, event_time)`, which
@@ -59,14 +72,14 @@ Same generator, same dropout, same 2,000-event replay overlap:
 | After (`V2`, natural key) | 293,418 | 293,418 | **0** |
 
 In the second run the source published 134,931 events, the consumer read all 134,931, wrote 132,931,
-and reported exactly 2,000 rejected by the key. The duplicates did not disappear — they became
+and reported exactly 2,000 rejected by the key. The duplicates did not disappear; they became
 *visible in a metric* instead of *invisible in the data*. That is the difference between a store you
 can trust and one you cannot.
 
 ### Why the surrogate key went away
 
 `V1` had a `bigserial id`. `V2` drops it. It identified a *row*, not a *reading*, so it made two
-copies of the same measurement look like two different facts — which is precisely how the duplicates
+copies of the same measurement look like two different facts, which is precisely how the duplicates
 got in. Once the natural key is the primary key, the surrogate has no job left, and the sequence it
 needed is one less point of contention on the write path.
 
@@ -74,7 +87,7 @@ needed is one less point of contention on the write path.
 
 The same natural key means the same reading, so overwriting `value` writes back what is already
 there. `do nothing` is cheaper and its row count tells you how many duplicates arrived. An upsert
-would be the right choice only if a later arrival could legitimately *correct* an earlier value —
+would be the right choice only if a later arrival could legitimately *correct* an earlier value,
 which is a different problem from replay.
 
 ## Measured end to end
@@ -91,8 +104,8 @@ Postgres, on one development machine:
 | Rows landed | 13.5M in a few minutes |
 
 Read that table carefully, because it says two different things at once. **Kafka absorbed the full
-firehose without dropping anything** — that is the shock absorber doing its job. **Postgres drains at
-a quarter of the produce rate** — so lag grows, and the pipeline is only sustainable at ~50k
+firehose without dropping anything**, which is the shock absorber doing its job. **Postgres drains
+at a quarter of the produce rate**, so lag grows, and the pipeline is only sustainable at ~50k
 events/sec today. Nothing is lost, but the backlog is real, and consumer lag is the metric that says
 so honestly. Fixing the write ceiling is what TimescaleDB, hypertables, and compression are for a few
 slices from now.
@@ -102,15 +115,18 @@ slices from now.
 Alongside the raw-write consumer, this module runs a **Kafka Streams** topology that turns the event
 stream into tumbling-window aggregates and threshold alerts.
 
-```
-telemetry.events ──rekey by (carId|sensorId)──► tumbling windows (1s, 1m)
-                                                        │
-                                          suppress until window closes
-                                                        │
-                                    ┌───────────────────┴───────────────────┐
-                                    ▼                                       ▼
-                            telemetry.rollups                       telemetry.alerts
-                     count / average / min / max            windowed max over a threshold
+```mermaid
+flowchart TB
+    E(["<b>telemetry.events</b>"])
+    W["tumbling windows, 1s and 1m<br/><b>on event time</b>, not arrival time"]
+    S["suppress until the window closes<br/>(one final record per window)"]
+    R(["<b>telemetry.rollups</b><br/>count / average / min / max"])
+    A(["<b>telemetry.alerts</b><br/>windowed max over a threshold"])
+
+    E -->|"rekey by carId + sensorId"| W --> S
+    S --> R
+    S --> A
+    L["a reading arriving<br/>more than <i>grace</i> late"] -.->|dropped-records| W
 ```
 
 Each rollup carries `carId`, `sensorId`, `windowLength`, `windowStart`, `windowEnd`, `count`,
@@ -136,13 +152,13 @@ CAR-01  speed                         window=PT1S  n=98   avg=336.65  min=331.75
 CAR-01  damper-travel-front-right     window=PT1S  n=460  avg=-23.50  min=-26.99  max=29.77
 ```
 
-20 samples/second for brake temperature, 98 for speed, 460 for damper travel — the catalogue rates,
+20 samples/second for brake temperature, 98 for speed, 460 for damper travel: the catalogue rates,
 measured at the far end of the pipeline.
 
 ### Event time, not arrival time
 
-`TelemetryEventTimestampExtractor` makes the topology window on `TelemetryEvent.timestamp()` — when
-the sensor took the reading — rather than on when Kafka received the record. Without it, a replayed
+`TelemetryEventTimestampExtractor` makes the topology window on `TelemetryEvent.timestamp()`, when
+the sensor took the reading, rather than on when Kafka received the record. Without it, a replayed
 burst would be bucketed into *the window it arrived in*, and every aggregate would be wrong in a way
 no test on the raw table would catch.
 
@@ -153,17 +169,17 @@ Same generator, same 20-second dropout, same replay, measured twice:
 
 | Grace period | Raw store after replay | Streams `dropped-records` |
 |---|---|---|
-| `10s` | 5,193,852 rows / 5,193,852 distinct — correct | **+295,410** |
+| `10s` | 5,193,852 rows / 5,193,852 distinct, correct | **+295,410** |
 | `60s` | correct | **0** |
 
 With a 10-second grace, ~295,000 replayed readings arrived after their windows had closed and were
-**silently discarded from the aggregates** — while the raw table stayed perfect. Two different
+**silently discarded from the aggregates**, while the raw table stayed perfect. Two different
 correctness problems, two different fixes: a natural key protects the store, a grace period protects
 the windows.
 
 `TimeWindows.ofSizeAndGrace(windowLength, grace)` is the watermark: a window waits `grace` past its
 end for stragglers, then closes for good. `Suppressed.untilWindowCloses` means one final record per
-window instead of a running update on every event. Sizing `grace` is the real decision — too short
+window instead of a running update on every event. Sizing `grace` is the real decision: too short
 and you lose late data, too long and every result is delayed by the grace period. The dropout
 duration your source can produce is the floor.
 
@@ -174,7 +190,7 @@ is folded in within grace, dropped beyond it, and kept again when grace is widen
 
 `spring.kafka.streams.properties.auto.offset.reset: latest`. Kafka Streams defaults to `earliest`, so
 a restart re-reads the whole retained topic and re-aggregates hours of history whose timestamps are
-long past — which showed up as 235,305 dropped records on the first run here, before a single live
+long past, which showed up as 235,305 dropped records on the first run here, before a single live
 event arrived. Live rollups want live data; historical aggregates are the time-series store's job.
 
 ## The time-series store
@@ -188,8 +204,8 @@ telemetry_event            hypertable, 5-minute chunks, columnstore after 1 hour
        └─ telemetry_rollup_1h   hierarchical continuous aggregate, built from the 1-minute one
 ```
 
-`telemetry_rollup_1h` is built **from** `telemetry_rollup_1m` rather than from raw data — a
-hierarchical continuous aggregate. The hourly refresh reads 60 pre-computed rows per series instead of
+`telemetry_rollup_1h` is built **from** `telemetry_rollup_1m` rather than from raw data, making it
+a hierarchical continuous aggregate. The hourly refresh reads 60 pre-computed rows per series instead of
 tens of thousands of raw ones. Note the weighted average: `sum(average * samples) / sum(samples)`, not
 `avg(average)`, because averaging averages over unequal buckets is wrong.
 
@@ -217,7 +233,7 @@ Storage, same data:
 | `telemetry_rollup_1m` | 1,040 kB |
 | `telemetry_rollup_1h` | 128 kB |
 
-A time-bounded query — one car, one sensor, a 10-minute slice — runs in **26-39 ms** and touches 3 of
+A time-bounded query (one car, one sensor, a 10-minute slice) runs in **26-39 ms** and touches 3 of
 the 10 chunks. That is chunk exclusion: the planner discards whole chunks by their time range before
 reading anything.
 
@@ -235,8 +251,8 @@ hypertable is a *partitioning strategy*, not a speed-up. It pays off in three sp
 3. **Retention**, where dropping old data is a chunk drop rather than a mass `DELETE`.
 
 The query speed-up came from the **continuous aggregate**, which is a different mechanism entirely:
-compute the rollup once on write, read it many times. That is the real trade — write more on ingest so
-reads are cheap — and it is why the answer to "make the dashboard fast" is not "a better database" but
+compute the rollup once on write, read it many times. That is the real trade, writing more on
+ingest so reads are cheap, and it is why the answer to "make the dashboard fast" is not "a better database" but
 "the right shape of data in the right place".
 
 ### Operational notes found by running it
@@ -270,7 +286,7 @@ the retention window and mostly outside the compression delay.
 ## Metrics
 
 Exported over OTLP to `grafana/otel-lgtm` every 5s, and readable locally on
-`/actuator/metrics`. There is no `/actuator/prometheus` — this platform does not carry a
+`/actuator/metrics`. There is no `/actuator/prometheus`, because this platform does not carry a
 Prometheus registry, and nothing scrapes it. Names below are the Micrometer names; see
 [`observability/README.md`](../observability/README.md) for how OTLP renames them in Grafana.
 
@@ -279,7 +295,7 @@ Prometheus registry, and nothing scrapes it. Names below are the Micrometer name
 | `pitwall.processor.events.consumed` | Events polled from Kafka |
 | `pitwall.processor.events.written` | Events inserted into the store |
 | `pitwall.processor.events.duplicates` | Events the natural key rejected as already stored |
-| `pitwall.processor.poll.batch.size` | Distribution of poll sizes — shows whether batching is working |
+| `pitwall.processor.poll.batch.size` | Distribution of poll sizes; shows whether batching is working |
 | `pitwall.processor.write.duration` | Per-batch write time, with p50/p95/p99 |
 | `pitwall.processor.rate.consumed` | Events consumed per second, sampled every second |
 | `pitwall.processor.rollups.emitted` | Windowed rollups emitted, tagged by window length |
@@ -298,7 +314,7 @@ docker exec -it pitwall-postgres psql -U pitwall -d pitwall -c \
   "select car_id, count(*), max(event_time) from telemetry_event group by car_id order by car_id;"
 ```
 
-The check that matters after a replay — these two numbers must be equal:
+The check that matters after a replay, where these two numbers must be equal:
 
 ```bash
 docker exec -it pitwall-postgres psql -U pitwall -d pitwall -c \

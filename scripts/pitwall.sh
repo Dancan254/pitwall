@@ -74,7 +74,7 @@ start_service() {
     return
   fi
   local jar="$ROOT/$service/target/$service-0.0.1-SNAPSHOT.jar"
-  [[ -f "$jar" ]] || die "missing $jar — run with PITWALL_BUILD=1"
+  [[ -f "$jar" ]] || die "missing $jar, run with PITWALL_BUILD=1"
   setsid nohup java -jar "$jar" "$@" > "$LOG_DIR/$service.log" 2>&1 < /dev/null &
   echo $! > "$RUN_DIR/$service.pid"
 }
@@ -165,7 +165,7 @@ cmd_logs() {
     return
   fi
   service=$(resolve_service "$service")
-  [[ -f "$LOG_DIR/$service.log" ]] || die "no log for '$1' — try: source, processor, serving"
+  [[ -f "$LOG_DIR/$service.log" ]] || die "no log for '$1', try: source, processor, serving"
   tail -n 200 -f "$LOG_DIR/$service.log"
 }
 
@@ -185,7 +185,7 @@ cmd_reset() {
 
 usage() {
   cat <<EOF
-Pitwall — run the whole platform
+Pitwall: run the whole platform
 
   ./scripts/pitwall.sh start [dev|race|breakit]   infra, then all three services
   ./scripts/pitwall.sh stop [--all]               stop services (--all also stops containers)

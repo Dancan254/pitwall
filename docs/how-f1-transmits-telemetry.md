@@ -12,9 +12,9 @@ invented.
 A Formula 1 car is a moving sensor array that cannot send everything it knows. It measures far more
 than its radio link can carry, so the system splits into two tiers:
 
-- **A live tier** — a prioritised subset streamed off the car over RF while it is running, sized to a
+- **A live tier**: a prioritised subset streamed off the car over RF while it is running, sized to a
   hard bandwidth budget, feeding the pit wall and the factory in near real time.
-- **A full-fidelity tier** — everything, logged onboard and offloaded over a wired "umbilical" when
+- **A full-fidelity tier**: everything, logged onboard and offloaded over a wired "umbilical" when
   the car stops in the garage.
 
 That split is the single most important thing to understand, and it is the same split that shows up in
@@ -44,9 +44,9 @@ Channels are not sampled uniformly. Published ranges put them between **100 Hz a
 ([F1 Chronicle](https://f1chronicle.com/f1-telemetry-and-data-explained/)). In practice the rate
 tracks how fast the physical quantity changes:
 
-- Slow-moving thermal channels (tyre carcass temperature, oil temperature) — order 1–10 Hz
-- Vehicle dynamics (speed, throttle, brake pressure, steering angle) — order 100 Hz
-- Fast structural and combustion channels (vibration, knock, damper travel) — up to 1 kHz+
+- Slow-moving thermal channels (tyre carcass temperature, oil temperature): order 1–10 Hz
+- Vehicle dynamics (speed, throttle, brake pressure, steering angle): order 100 Hz
+- Fast structural and combustion channels (vibration, knock, damper travel): up to 1 kHz+
 
 This non-uniformity matters for Pitwall: a realistic generator emits **different sensors at different
 rates**, which is what makes the key space high-cardinality and the arrival pattern uneven. A generator
@@ -59,7 +59,7 @@ where every sensor ticks at the same frequency produces an unrealistically well-
 | 1.1 million data points/second | whole grid | [Yahoo Sports](https://sports.yahoo.com/articles/much-data-does-f1-car-035100099.html) |
 | 150,000 data points/second | per car (250+ sensors) | [f1briefing](https://f1briefing.com/how-f1-sensors-collect-data-in-real-time/) |
 
-These two are hard to reconcile — 20 cars at 150k/s would be 3M/s, not 1.1M/s. The likely explanation
+These two are hard to reconcile: 20 cars at 150k/s would be 3M/s, not 1.1M/s. The likely explanation
 is that the 1.1M figure counts the **transmitted** live subset across the grid while the 150k figure
 counts what a single car **measures** onboard. That reading is consistent with the two-tier model and
 with the bandwidth budget below. Treat 1.1M/s as the *wire* number and 150k/car as the *sensor* number.
@@ -79,7 +79,7 @@ entirely on scope. **Per car, per weekend: ~1.5 TB.** Whole event including broa
 
 The 30 MB/lap figure is the interesting one for an engineer, because it is a *constraint*, not a
 statistic. A 90-second lap at 30 MB is roughly **2.7 Mbit/s of sustained telemetry per car**. That is a
-small pipe for 1,500 channels — which is exactly why the live tier is a prioritised subset and why the
+small pipe for 1,500 channels, which is exactly why the live tier is a prioritised subset and why the
 wire format is binary and tightly packed rather than JSON.
 
 ---
@@ -95,8 +95,8 @@ The car transmits from an antenna at the front; trackside antennas receive
 ([f1-fansite](https://www.f1-fansite.com/glossary/telemetry/)).
 
 Handover between cells, tunnels, and pit-lane structures are why **dropout is normal, not exceptional**.
-The onboard logger keeps recording through a dropout and the missing window is reconciled afterwards —
-which is precisely Pitwall's dropout-then-replay scenario, and the reason late and duplicate data has
+The onboard logger keeps recording through a dropout and the missing window is reconciled
+afterwards, which is precisely Pitwall's dropout-then-replay scenario, and the reason late and duplicate data has
 to be a first-class design concern rather than an error case.
 
 ### Telemetry is one-way
@@ -110,7 +110,7 @@ settings back to the car mid-session; they can only tell the driver what to chan
 Since 2008 every team runs the same **McLaren Applied standard ECU (SECU)**, which is what lets the FIA
 enforce complete, comparable logging across the grid. Data is decoded in the garage and distributed to
 engineers over Ethernet through **ATLAS** (Advanced Telemetry Linked Acquisition System), also McLaren
-Applied — the industry-standard analysis client every team uses
+Applied, the industry-standard analysis client every team uses
 ([formula1-dictionary](https://www.formula1-dictionary.net/telemetry.html),
 [f1briefing](https://f1briefing.com/how-wireless-telemetry-works-in-f1/)).
 
@@ -164,14 +164,14 @@ Six properties of the real system that the simulator and pipeline should reprodu
 |---|---|
 | A prioritised live subset, not everything | `pitwall-source` emits the live tier only; the full-fidelity tier is out of scope |
 | Non-uniform sample rates per channel | Each sensor definition carries its own Hz, not one global rate |
-| High cardinality — cars × channels | Key space is `(carId, sensorId)`; hot-partition risk is real |
+| High cardinality (cars × channels) | Key space is `(carId, sensorId)`; hot-partition risk is real |
 | Dropout is normal (cells, tunnels, pit structures) | Toggleable dropout-then-replay mode producing duplicates and late data |
 | Hard bandwidth budget on the wire | Binary wire format (Protobuf) is justified by the 2.7 Mbit/s/car constraint, not by taste |
 | Two audiences, two read patterns | Live SSE push (pit wall) + TimescaleDB historical query API (factory) |
 
 ### Derived default configuration
 
-Every channel in the catalogue carries its own sample rate, taken from the ranges above — 1–2 Hz for
+Every channel in the catalogue carries its own sample rate, taken from the ranges above: 1–2 Hz for
 oil and water temperature, 5 Hz for tyre temperatures and pressures, 100–200 Hz for vehicle dynamics,
 500–1000 Hz for damper travel and chassis vibration. There is **one** load dial, `rate-scale`, which
 multiplies every channel's rate at once, so turning it up preserves the non-uniform shape of the stream
@@ -190,7 +190,7 @@ Three named Spring profiles:
 | Profile | Cars × channels × scale | Target events/sec | Purpose |
 |---|---|---|---|
 | `dev` | 5 × 20 × 0.1 | 870 | Runs anywhere, fast feedback loop |
-| `race` | 20 × 100 × 1.0 | 232,600 | The realistic target — the number the demo is built around |
+| `race` | 20 × 100 × 1.0 | 232,600 | The realistic target, the number the demo is built around |
 | `breakit` | 20 × 300 × 4.0 | 2,702,400 | Well past the real grid's wire volume; used to find where each stage fails |
 
 `race` at 232,600 events/second sits in the same order of magnitude as the real grid's ~1.1M
@@ -208,16 +208,16 @@ point.
 | `breakit` | 2,702,400 | ~1,120,000 | Generator itself is the bottleneck |
 
 The generator reports target and actual separately and never tries to catch up on missed ticks. When
-the machine cannot keep up it simply runs slower and the gap between the two numbers shows it — which
-is the honest behaviour, and the first place a load story can lie if you let it.
+the machine cannot keep up it simply runs slower and the gap between the two numbers shows it,
+which is the honest behaviour, and the first place a load story can lie if you let it.
 
 ## Sources
 
-- [How Much Data Does An F1 Car Generate? — Yahoo Sports](https://sports.yahoo.com/articles/much-data-does-f1-car-035100099.html)
-- [F1 Telemetry and Data: What Teams See in Real Time — F1 Chronicle](https://f1chronicle.com/f1-telemetry-and-data-explained/)
-- [How F1 Sensors Collect Data in Real Time — f1briefing](https://f1briefing.com/how-f1-sensors-collect-data-in-real-time/)
-- [F1 Telemetry: How Wireless Data Drives Race Performance — f1briefing](https://f1briefing.com/how-wireless-telemetry-works-in-f1/)
-- [Telemetry in F1: one-way data, Race Operations Centre and rules — f1-fansite](https://www.f1-fansite.com/glossary/telemetry/)
-- [F1 Telemetry: Real-Time Data Systems — Formula 1 Dictionary](https://www.formula1-dictionary.net/telemetry.html)
-- [Feature: Data and Electronics in F1, Explained! — Mercedes-AMG PETRONAS F1 Team](https://www.mercedesamgf1.com/news/feature-data-and-electronics-in-f1-explained)
-- [Formula 1's Data Explosion: The Petabyte Race Weekend Is Not Far Off — Forbes](https://www.forbes.com/sites/johnkoetsier/2026/05/23/formula-1s-data-explosion-the-petabyte-race-weekend-is-not-far-off/)
+- [How Much Data Does An F1 Car Generate? (Yahoo Sports)](https://sports.yahoo.com/articles/much-data-does-f1-car-035100099.html)
+- [F1 Telemetry and Data: What Teams See in Real Time (F1 Chronicle)](https://f1chronicle.com/f1-telemetry-and-data-explained/)
+- [How F1 Sensors Collect Data in Real Time (f1briefing)](https://f1briefing.com/how-f1-sensors-collect-data-in-real-time/)
+- [F1 Telemetry: How Wireless Data Drives Race Performance (f1briefing)](https://f1briefing.com/how-wireless-telemetry-works-in-f1/)
+- [Telemetry in F1: one-way data, Race Operations Centre and rules (f1-fansite)](https://www.f1-fansite.com/glossary/telemetry/)
+- [F1 Telemetry: Real-Time Data Systems (Formula 1 Dictionary)](https://www.formula1-dictionary.net/telemetry.html)
+- [Feature: Data and Electronics in F1, Explained! (Mercedes-AMG PETRONAS F1 Team)](https://www.mercedesamgf1.com/news/feature-data-and-electronics-in-f1-explained)
+- [Formula 1's Data Explosion: The Petabyte Race Weekend Is Not Far Off (Forbes)](https://www.forbes.com/sites/johnkoetsier/2026/05/23/formula-1s-data-explosion-the-petabyte-race-weekend-is-not-far-off/)

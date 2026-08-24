@@ -10,7 +10,7 @@
 
 Pitwall is a reference implementation of a real-time, high-throughput telemetry ingestion platform, modelled on how a Formula 1 team streams data off the car and onto the pit wall.
 
-A modern F1 car carries around 300 sensors, which the ECU turns into 1,000 to 2,000 channels sampled anywhere from 1 Hz to 1 kHz — roughly 150,000 data points per second measured onboard, and over 1.5 TB accumulated across a race weekend. Only a prioritised subset leaves the car live: about 30 MB per lap, which is a mere 2.7 Mbit/s. Everything else is logged onboard and offloaded over a wired umbilical when the car stops in the garage. Across the whole grid, that live stream runs on the order of 1.1 million data points per second.
+A modern F1 car carries around 300 sensors, which the ECU turns into 1,000 to 2,000 channels sampled anywhere from 1 Hz to 1 kHz: roughly 150,000 data points per second measured onboard, and over 1.5 TB accumulated across a race weekend. Only a prioritised subset leaves the car live: about 30 MB per lap, which is a mere 2.7 Mbit/s. Everything else is logged onboard and offloaded over a wired umbilical when the car stops in the garage. Across the whole grid, that live stream runs on the order of 1.1 million data points per second.
 
 That live data has to arrive fast enough to act on within a lap, survive radio dropouts through tunnels and between cells, and feed two completely different audiences at once: engineers watching live traces on the pit wall, and a factory analytics team running historical comparisons lap after lap.
 
