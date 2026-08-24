@@ -19,7 +19,21 @@
 
 	<properties>
 		<java.version>25</java.version>
+		<!-- The Logback appender has no stable release; it ships only from the
+		     instrumentation -alpha line. 2.21.0-alpha is the release that pairs
+		     with the OpenTelemetry 1.55.0 that Spring Boot 4.0.0 manages. -->
+		<opentelemetry-instrumentation.version>2.21.0-alpha</opentelemetry-instrumentation.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>io.opentelemetry.instrumentation</groupId>
+				<artifactId>opentelemetry-logback-appender-1.0</artifactId>
+				<version>${opentelemetry-instrumentation.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<modules>
 		<module>pitwall-commons</module>

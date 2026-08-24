@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+    <!-- Export threshold, separate from the console level on purpose: the console
+         is for a developer watching one service, Loki is for the whole platform at
+         telemetry volume. Raise to WARN with pitwall.observability.log-export-level. -->
+    <springProperty scope="context" name="LOG_EXPORT_LEVEL"
+                    source="pitwall.observability.log-export-level" defaultValue="INFO"/>
+
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>${LOG_EXPORT_LEVEL}</level>
+        </filter>
+    </appender>
+
+    <!-- Sampled per-event lines, and the sink exists precisely to be run with no
+         infrastructure up. Console only, never over the wire. -->
+    <logger name="com.yourjavaguy.pitwall.source.sink.LoggingTelemetrySink" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="OTEL"/>
+    </root>
+</configuration>

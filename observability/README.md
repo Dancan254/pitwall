@@ -54,8 +54,43 @@ bracket quoting in YAML or Spring's relaxed binding mangles the dots.
 
 ## Signals
 
-Metrics and traces. Logs are not exported: the OTLP logging appender has to be wired into Logback by
-hand, and at telemetry volumes the log stream needs a plan of its own.
+Metrics, traces, and logs, all three over OTLP.
+
+Logs need more wiring than the other two, because Spring Boot 4 configures the export side but not
+the input side. `OpenTelemetryLoggingAutoConfiguration` and `OtlpLoggingAutoConfiguration` build the
+`SdkLoggerProvider` and the OTLP exporter for you, but nothing feeds them until you add the Logback
+appender yourself:
+
+- `io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0` on the classpath. It has no
+  stable release; it ships only from the instrumentation `-alpha` line. `2.21.0-alpha` is the
+  release that pairs with the OpenTelemetry 1.55.0 that Boot 4.0.0 manages, and the version is
+  pinned in the parent pom rather than by importing the alpha BOM, which would drag the whole OTel
+  API forward with it.
+- `logback-spring.xml` in each service, attaching the appender to the root logger.
+- `OpenTelemetryAppender.install(openTelemetry)` at startup. Boot does not do this. Commons carries
+  it as a gated auto-configuration, ordered **after**
+  `OpenTelemetrySdkAutoConfiguration`; without that ordering `@ConditionalOnBean(OpenTelemetry.class)`
+  is evaluated before the SDK bean exists, the installer never runs, and the appender drops every
+  record without a word. That failure looks exactly like a broken endpoint.
+
+### The export threshold
+
+The console and the export are deliberately on different levels. The console is for one developer
+watching one service; Loki is the whole platform at telemetry volume.
+
+```yaml
+pitwall:
+  observability:
+    log-export-level: WARN     # default INFO
+```
+
+Measured: at `INFO` a service exports around 60 records over a startup and a minute of running. At
+`WARN` the same run exports zero while the console still shows all 60.
+
+`LoggingTelemetrySink` is excluded from export entirely, with `additivity="false"` and a console-only
+appender. It writes one sampled line per N events and exists precisely so the source can run with no
+infrastructure at all, so shipping it over the wire is both pointless and the fastest way to drown
+Loki on the `race` profile.
 
 ## The panels
 
@@ -93,12 +128,14 @@ about the pipeline**, not the telemetry flowing through it:
 | How many events per second are produced, consumed, written? | Grafana, **throughput** |
 | How many duplicate readings did the natural key reject? | Grafana, **correctness** |
 | How late was the latest reading to arrive? | Grafana, `kafka_stream_task_record_lateness_max` |
+| What did a service log when it failed? | Grafana, **Loki**, `{service_name="pitwall-processor"}` |
 | What is CAR-01 doing right now? | The pit wall, http://localhost:8083 |
 | What did CAR-01's brake temperature read at 14:32? | The query API, or `psql` |
 
-There is no panel that shows an individual reading, and no query you can write to get one. Logs are
-not exported (see **Signals** above) and traces are HTTP control-plane spans, not data. Individual
-readings live in `telemetry_event` and reach the browser over SSE; they never reach Grafana.
+There is no panel that shows an individual reading, and no query you can write to get one. The logs
+that do reach Loki are application logs, startup and lifecycle and warnings, not telemetry; the
+traces are HTTP control-plane spans, not data. Individual readings live in `telemetry_event` and
+reach the browser over SSE; they never reach Grafana.
 
 ### A run worth watching
 

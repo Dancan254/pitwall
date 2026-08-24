@@ -59,6 +59,10 @@ management:
       export:
         otlp:
           endpoint: http://localhost:4328/v1/traces
+    logging:
+      export:
+        otlp:
+          endpoint: http://localhost:4328/v1/logs
   observations:
     enable:
       "[tasks.scheduled.execution]": false

@@ -1,1 +1,2 @@
 com.yourjavaguy.pitwall.commons.autoconfigure.WebExceptionAutoConfiguration
+com.yourjavaguy.pitwall.commons.autoconfigure.OpenTelemetryAppenderAutoConfiguration

@@ -32,6 +32,13 @@
 			<optional>true</optional>
 		</dependency>
 
+		<!-- optional: only activates in services that ship logs over OTLP -->
+		<dependency>
+			<groupId>io.opentelemetry.instrumentation</groupId>
+			<artifactId>opentelemetry-logback-appender-1.0</artifactId>
+			<optional>true</optional>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-configuration-processor</artifactId>

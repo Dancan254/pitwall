@@ -185,9 +185,18 @@ containerised. Without compose running, start the source on the logging sink:
   `GlobalExceptionHandler` has a dedicated no-body handler for `AsyncRequestNotUsableException`,
   because a browser closing a stream is normal and must not be turned into a 500.
 - **Observability is OTLP only.** `spring-boot-starter-opentelemetry` in every bootable service
-  exporting to one `grafana/otel-lgtm` container. No Prometheus registry, no scrape config, and no
-  custom observability beans. The old commons `ObservabilityAutoConfiguration` was deleted because
-  OTel carries `service_name` from `spring.application.name` already.
+  exporting to one `grafana/otel-lgtm` container. No Prometheus registry and no scrape config. The
+  old commons `ObservabilityAutoConfiguration` was deleted because OTel carries `service_name` from
+  `spring.application.name` already.
+- **All three signals ship, and logs are the awkward one.** Boot 4 auto-configures the OTLP log
+  exporter but nothing feeds it: the `opentelemetry-logback-appender-1.0` dependency, a
+  `logback-spring.xml`, and an `OpenTelemetryAppender.install(...)` bean are all required. Commons
+  owns that installer as the one observability bean there, gated on the appender class and ordered
+  after `OpenTelemetrySdkAutoConfiguration`. Get the ordering wrong and `@ConditionalOnBean` skips
+  the installer silently while everything else looks healthy.
+- **Export level is separate from console level.** `pitwall.observability.log-export-level` (default
+  `INFO`) filters what leaves the process. `LoggingTelemetrySink` is console-only via
+  `additivity="false"`; it is per-event and would drown Loki on the `race` profile.
 - **Set `management.tracing.sampling.probability` explicitly** in every service; it defaults to 0.1.
   Scheduled tasks are excluded from tracing via
   `management.observations.enable."[tasks.scheduled.execution]": false`. The bracket quoting is
