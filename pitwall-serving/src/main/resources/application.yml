@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: pitwall-serving
+  threads:
+    virtual:
+      enabled: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: latest
+      properties:
+        max.poll.records: 500
+        fetch.max.wait.ms: 100
+
+  datasource:
+    url: jdbc:postgresql://localhost:5434/pitwall
+    username: pitwall
+    password: pitwall
+    hikari:
+      maximum-pool-size: 8
+
+  flyway:
+    enabled: false
+
+server:
+  port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:4328/v1/metrics
+        step: 5s
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4328/v1/traces
+  observations:
+    enable:
+      "[tasks.scheduled.execution]": false
+  tracing:
+    sampling:
+      probability: 1.0
+
+
+pitwall:
+  serving:
+    rollup-topic: telemetry.rollups
+    alert-topic: telemetry.alerts
+    stream-timeout: 30m
+    alert-history-size: 200
+    maximum-query-rows: 5000
