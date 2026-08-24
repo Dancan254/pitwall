@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>4.0.0</version>
+		<relativePath/>
+	</parent>
+
+	<groupId>com.yourjavaguy</groupId>
+	<artifactId>pitwall</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>pitwall</name>
+	<description>High-throughput F1 telemetry ingestion platform</description>
+
+	<properties>
+		<java.version>25</java.version>
+	</properties>
+
+	<modules>
+		<module>pitwall-commons</module>
+		<module>pitwall-schema</module>
+		<module>pitwall-source</module>
+		<module>pitwall-stream-processor</module>
+		<module>pitwall-serving</module>
+	</modules>
+
+</project>
