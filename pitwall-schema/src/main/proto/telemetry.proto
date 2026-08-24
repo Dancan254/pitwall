@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pitwall.v1;
+
+option java_package = "com.yourjavaguy.pitwall.schema.proto";
+option java_outer_classname = "TelemetryProto";
+option java_multiple_files = true;
+
+message TelemetryEventMessage {
+  string car_id       = 1;
+  string sensor_id    = 2;
+  int64  timestamp_ms = 3;
+  int32  timestamp_ns = 4;
+  double value        = 5;
+  int64  sequence_no  = 6;
+}
