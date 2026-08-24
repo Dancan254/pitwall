@@ -16,15 +16,35 @@ Then open **http://localhost:8083**.
 
 ## The dashboard
 
-One static page, no build step, no npm in a Java repo. Three things on it:
+One static page, no build step, no npm in a Java repo. Four things on it:
 
-- **Live**: the latest 1-second rollup for every `(car, sensor)` channel, straight off the SSE feed.
-  A car whose channel has breached a threshold gets a highlighted border.
+- **The garage**: the two Mercedes cars in full, driven by the latest 1-second rollup per channel.
+  Radial dials for `speed` and `engine-rpm`, a gear readout, throttle and brake bars, and running
+  average and peak speed accumulated from the rollup stream. A car whose channel has breached a
+  threshold turns the card and its dials to the alert colour.
+- **Rest of the grid**: every other car as one line, current speed only. The demo is about the
+  Mercedes garage; the other cars are there to show the pipeline is carrying all of them.
 - **Alerts**: threshold breaches as they fire, newest first, backfilled on load from
   `/api/v1/live/alerts` so a browser opening late still sees recent history.
-- **History**: pick a car, a sensor, and a resolution, and query the continuous aggregates. The page
-  reports how long the query took, which is the point: it is reading pre-computed buckets, not raw
-  rows.
+- **Telemetry analysis**: pick a car, a resolution, and up to six channels, then query the continuous
+  aggregates. The page reports how long the query took, which is the point: it is reading
+  pre-computed buckets, not raw rows.
+
+### Driver names are a display mapping, nothing more
+
+The pipeline has no concept of a driver, a team, a lap, or a circuit. `TelemetryEvent` carries
+`(carId, sensorId, timestamp, value, sequenceNo)` and that is all. The page maps `CAR-01` and
+`CAR-02` to the two Mercedes drivers in a lookup table at the top of the script so the demo reads
+like a garage instead of a spreadsheet. Nothing downstream knows or cares. Every number on the page
+came out of the pipeline; only the names on the cards did not.
+
+### Why the analysis chart uses lanes instead of an overlay
+
+Most of the interesting channels (`speed`, `engine-rpm`, `throttle-position`, `brake-pressure`) are
+`LAP_CORRELATED` in the generator, so they all follow the same lap simulation. Scale each to its own
+range and overlay them and they land on top of one another exactly: you see one line and assume the
+chart is broken. Each channel gets its own lane, which is also how real telemetry analysis clients
+show stacked channels.
 
 ## API
 

@@ -6,65 +6,139 @@
 <title>Pitwall</title>
 <style>
   :root {
-    --bg: #12121f;
-    --panel: #1a1a2e;
-    --line: #2a2a45;
-    --text: #e8e8f0;
-    --muted: #8888a8;
-    --accent: #f0196a;
-    --ok: #35d07f;
+    --bg: #080b0e;
+    --panel: #10161b;
+    --panel-2: #161e24;
+    --line: #1e2a32;
+    --text: #e6eef1;
+    --muted: #7b94a1;
+    --teal: #00d2be;
+    --teal-dim: #007f74;
+    --silver: #c3ced4;
+    --alert: #f0196a;
+    --amber: #ffb300;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 14px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
+
   header {
-    display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;
-    padding: 16px 24px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    padding: 12px 22px; border-bottom: 1px solid var(--line); background: var(--panel);
   }
-  h1 { margin: 0; font-size: 20px; letter-spacing: 4px; text-transform: uppercase; }
-  h1 span { color: var(--accent); }
-  .stat { color: var(--muted); }
-  .stat b { color: var(--text); font-weight: 600; }
-  #status { color: var(--muted); }
-  #status.live { color: var(--ok); }
+  .mark {
+    font-size: 17px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase;
+  }
+  .mark span { color: var(--teal); }
+  .team {
+    color: var(--silver); letter-spacing: 3px; text-transform: uppercase; font-size: 10px;
+    border-left: 2px solid var(--teal); padding-left: 12px; line-height: 1.4;
+  }
+  .team i { display: block; color: var(--muted); font-style: normal; letter-spacing: 2px; }
+  .spacer { flex: 1 1 auto; }
+  .stat { color: var(--muted); font-size: 11px; letter-spacing: 1px; }
+  .stat b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  #status { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  #status.live { color: var(--teal); }
   #status.live::before { content: "\25CF "; }
-  #status.down { color: var(--accent); }
-  main { display: grid; grid-template-columns: 1fr 340px; gap: 20px; padding: 20px 24px; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #status.down { color: var(--alert); }
+
+  main { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 18px; padding: 18px 22px; }
+  @media (max-width: 1080px) { main { grid-template-columns: minmax(0,1fr); } }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  section + section { margin-top: 18px; }
   section h2 {
-    margin: 0; padding: 12px 16px; font-size: 11px; letter-spacing: 2px;
+    margin: 0; padding: 11px 15px; font-size: 10px; letter-spacing: 2.5px;
     text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line);
   }
-  .cars { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; padding: 16px; }
-  .car { border: 1px solid var(--line); border-radius: 4px; padding: 12px; }
-  .car.alerting { border-color: var(--accent); }
-  .car h3 { margin: 0 0 8px; font-size: 15px; color: var(--accent); letter-spacing: 1px; }
-  .row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
-  .row span:first-child { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .row span:last-child { font-variant-numeric: tabular-nums; }
-  #alerts { max-height: 420px; overflow-y: auto; padding: 8px 16px 16px; }
-  .alert { border-left: 2px solid var(--accent); padding: 6px 10px; margin-top: 8px; background: #21132133; }
-  .alert b { color: var(--accent); }
-  .alert small { color: var(--muted); display: block; }
-  .empty { color: var(--muted); padding: 16px; }
-  form { display: flex; gap: 8px; flex-wrap: wrap; padding: 16px; align-items: center; }
+  section h2 b { color: var(--teal); font-weight: 600; }
+
+  .garage { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; padding: 15px; }
+  .driver {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-left: 3px solid var(--teal); border-radius: 5px; padding: 14px;
+  }
+  .driver.alerting { border-color: var(--alert); border-left-color: var(--alert); }
+  .driver.stale { opacity: .45; }
+  .name { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .num {
+    background: var(--teal); color: #04231f; font-weight: 700; font-size: 13px;
+    padding: 1px 7px; border-radius: 3px; letter-spacing: 0;
+  }
+  .driver.alerting .num { background: var(--alert); color: #2a0512; }
+  .given { color: var(--muted); }
+  .family { font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .car-id { color: var(--muted); font-size: 10px; letter-spacing: 2px; margin-left: auto; }
+
+  .dials { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .dial { position: relative; width: 108px; height: 108px; flex: 0 0 auto; }
+  .dial svg { width: 108px; height: 108px; display: block; }
+  .dial .read {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; pointer-events: none;
+  }
+  .dial .read b { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .dial .read i { font-style: normal; font-size: 9px; color: var(--muted); letter-spacing: 1.5px; margin-top: 3px; }
+  .gearbox { text-align: center; flex: 1 1 auto; }
+  .gearbox b { display: block; font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .gearbox i { font-style: normal; font-size: 9px; color: var(--muted); letter-spacing: 2px; }
+
+  .bars { margin-top: 12px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .bar-row span:first-child { width: 62px; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .track { flex: 1 1 auto; height: 7px; background: #0a1014; border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--teal); transition: width .18s linear; }
+  .fill.brake { background: var(--alert); }
+  .bar-row span:last-child { width: 62px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11px; }
+
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 13px;
+           border-top: 1px solid var(--line); padding-top: 10px; }
+  .fact i { font-style: normal; display: block; font-size: 9px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+  .fact b { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 13px 15px 0; max-height: 108px; overflow-y: auto; }
+  .chip {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+    border-radius: 12px; padding: 3px 11px; font: inherit; font-size: 11px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--teal-dim); color: var(--text); }
+  .chip.on { background: var(--teal); border-color: var(--teal); color: #04231f; font-weight: 600; }
+  .chip-note { color: var(--muted); font-size: 10px; padding: 8px 15px 0; letter-spacing: 1px; }
+
+  form { display: flex; gap: 8px; flex-wrap: wrap; padding: 13px 15px; align-items: center; }
   select, button {
     background: var(--bg); color: var(--text); border: 1px solid var(--line);
-    border-radius: 4px; padding: 6px 10px; font: inherit;
+    border-radius: 4px; padding: 5px 9px; font: inherit; font-size: 12px;
   }
-  button { border-color: var(--accent); color: var(--accent); cursor: pointer; }
-  .chart-wrap { padding: 0 16px 8px; }
-  #chart { width: 100%; height: 220px; display: block; }
-  #queryNote { color: var(--muted); padding: 0 16px 16px; }
+  button { border-color: var(--teal); color: var(--teal); cursor: pointer; }
+  button:hover { background: var(--teal); color: #04231f; }
+  .chart-wrap { padding: 0 15px 6px; }
+  #chart { width: 100%; height: 230px; display: block; }
+  #legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 0 15px 6px; font-size: 11px; }
+  #legend span { color: var(--muted); }
+  #legend b { font-weight: 600; }
+  #queryNote { color: var(--muted); padding: 0 15px 14px; font-size: 11px; }
+
+  #alerts { max-height: 340px; overflow-y: auto; padding: 6px 15px 14px; }
+  .alert { border-left: 2px solid var(--alert); padding: 6px 10px; margin-top: 7px; background: #2410201f; }
+  .alert b { color: var(--alert); }
+  .alert small { color: var(--muted); display: block; font-size: 10px; }
+  .grid-strip { padding: 6px 15px 14px; max-height: 300px; overflow-y: auto; }
+  .grid-row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px solid #141d23; }
+  .grid-row span:first-child { color: var(--muted); }
+  .grid-row span:last-child { font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); padding: 14px 15px; font-size: 11px; }
 </style>
 </head>
 <body>
+
 <header>
-  <h1>Pit<span>wall</span></h1>
+  <span class="mark">Pit<span>wall</span></span>
+  <span class="team">Mercedes-AMG Petronas<i>simulated telemetry</i></span>
   <span id="status">connecting</span>
+  <span class="spacer"></span>
   <span class="stat">rollups <b id="rollupCount">0</b></span>
   <span class="stat">alerts <b id="alertCount">0</b></span>
   <span class="stat">channels <b id="channelCount">0</b></span>
@@ -73,75 +147,191 @@
 <main>
   <div>
     <section>
-      <h2>Live &mdash; latest 1s rollup per channel</h2>
-      <div class="cars" id="cars"><div class="empty">waiting for telemetry&hellip;</div></div>
+      <h2>The garage &middot; <b>live</b>, latest 1s rollup per channel</h2>
+      <div class="garage" id="garage"><div class="empty">waiting for telemetry&hellip;</div></div>
     </section>
 
-    <section style="margin-top:20px">
-      <h2>History &mdash; continuous aggregates</h2>
+    <section>
+      <h2>Telemetry analysis &middot; <b>continuous aggregates</b></h2>
       <form id="queryForm">
         <select id="carSelect"></select>
-        <select id="sensorSelect"></select>
         <select id="resolution">
-          <option value="ONE_MINUTE">1 minute</option>
-          <option value="ONE_HOUR">1 hour</option>
+          <option value="ONE_MINUTE">1 minute buckets</option>
+          <option value="ONE_HOUR">1 hour buckets</option>
         </select>
         <button type="submit">query</button>
       </form>
+      <div class="chips" id="chips"></div>
+      <div class="chip-note" id="chipNote">select channels to plot</div>
       <div class="chart-wrap"><canvas id="chart"></canvas></div>
+      <div id="legend"></div>
       <div id="queryNote"></div>
     </section>
   </div>
 
-  <section>
-    <h2>Alerts</h2>
-    <div id="alerts"><div class="empty">none</div></div>
-  </section>
+  <div>
+    <section>
+      <h2>Alerts</h2>
+      <div id="alerts"><div class="empty">none</div></div>
+    </section>
+    <section>
+      <h2>Rest of the grid</h2>
+      <div class="grid-strip" id="gridStrip"><div class="empty">none</div></div>
+    </section>
+  </div>
 </main>
 
 <script>
+// Display names only. The pipeline carries car ids; it has no concept of a driver.
+const DRIVERS = {
+  "CAR-01": { number: 63, given: "George", family: "Russell" },
+  "CAR-02": { number: 12, given: "Kimi",   family: "Antonelli" }
+};
+const GARAGE = Object.keys(DRIVERS);
+
+const DIALS = [
+  { sensorId: "speed",      label: "km/h", min: 0, max: 360,   decimals: 0 },
+  { sensorId: "engine-rpm", label: "rpm",  min: 0, max: 15000, decimals: 0 }
+];
+const BARS = [
+  { sensorId: "throttle-position", label: "throttle", min: 0, max: 100, unit: "%",   klass: "" },
+  { sensorId: "brake-pressure",    label: "brake",    min: 0, max: 140, unit: "bar", klass: "brake" }
+];
+const ARC = "M22.18 85.82 A45 45 0 1 1 85.82 85.82";
+const ARC_LENGTH = 2 * Math.PI * 45 * 0.75;
+const SERIES_COLOURS = ["#00d2be", "#ffb300", "#f0196a", "#8fb8ff", "#c3ced4", "#7ee787"];
+const STALE_AFTER_MS = 5000;
+
 const latest = new Map();
-let rollupCount = 0, alertCount = 0;
+const seen = new Map();
 const alerting = new Set();
+let rollupCount = 0, alertCount = 0;
+let selectedSensors = [];
+let lastRows = [];
 
 const statusEl = document.getElementById("status");
-const carsEl = document.getElementById("cars");
+const garageEl = document.getElementById("garage");
 const alertsEl = document.getElementById("alerts");
+const stripEl = document.getElementById("gridStrip");
+
+function reading(carId, sensorId) {
+  return latest.get(carId + "|" + sensorId);
+}
+
+function track(rollup) {
+  const key = rollup.carId + "|" + rollup.sensorId;
+  latest.set(key, rollup);
+  const previous = seen.get(key);
+  seen.set(key, {
+    maximum: previous ? Math.max(previous.maximum, rollup.maximum) : rollup.maximum,
+    total: (previous ? previous.total : 0) + rollup.average * rollup.count,
+    count: (previous ? previous.count : 0) + rollup.count,
+    at: Date.now()
+  });
+}
+
+function dialSvg(fraction, colour) {
+  const filled = Math.max(0, Math.min(1, fraction)) * ARC_LENGTH;
+  return `<svg viewBox="0 0 108 108" aria-hidden="true">
+    <path d="${ARC}" fill="none" stroke="#0d1418" stroke-width="9" stroke-linecap="round"/>
+    <path d="${ARC}" fill="none" stroke="${colour}" stroke-width="9" stroke-linecap="round"
+          stroke-dasharray="${filled.toFixed(2)} ${ARC_LENGTH.toFixed(2)}"/>
+  </svg>`;
+}
+
+function driverCard(carId) {
+  const driver = DRIVERS[carId];
+  const isAlerting = alerting.has(carId);
+  const colour = isAlerting ? "#f0196a" : "#00d2be";
+
+  const dials = DIALS.map(dial => {
+    const row = reading(carId, dial.sensorId);
+    const value = row ? row.average : null;
+    const fraction = value === null ? 0 : (value - dial.min) / (dial.max - dial.min);
+    return `<div class="dial">${dialSvg(fraction, colour)}
+      <div class="read"><b>${value === null ? "&mdash;" : value.toFixed(dial.decimals)}</b><i>${dial.label}</i></div>
+    </div>`;
+  }).join("");
+
+  const gearRow = reading(carId, "gear");
+  const gear = gearRow ? Math.round(gearRow.average) : "&mdash;";
+
+  const bars = BARS.map(bar => {
+    const row = reading(carId, bar.sensorId);
+    const value = row ? row.average : null;
+    const percent = value === null ? 0 : ((value - bar.min) / (bar.max - bar.min)) * 100;
+    return `<div class="bar-row">
+      <span>${bar.label}</span>
+      <span class="track"><span class="fill ${bar.klass}" style="width:${Math.max(0, Math.min(100, percent)).toFixed(1)}%"></span></span>
+      <span>${value === null ? "&mdash;" : value.toFixed(1) + " " + bar.unit}</span>
+    </div>`;
+  }).join("");
+
+  const speedHistory = seen.get(carId + "|speed");
+  const fuelRow = reading(carId, "fuel-remaining");
+  const spare = fuelRow
+    ? { label: "fuel", text: fuelRow.average.toFixed(1) + " kg" }
+    : sparePeak(carId, "brake-temperature-front-left", "peak brake fl", "C");
+
+  return `<div class="driver ${isAlerting ? "alerting" : ""} ${isStale(carId) ? "stale" : ""}">
+    <div class="name">
+      <span class="num">${driver.number}</span>
+      <span class="given">${driver.given}</span><span class="family">${driver.family}</span>
+      <span class="car-id">${carId}</span>
+    </div>
+    <div class="dials">${dials}
+      <div class="gearbox"><b>${gear}</b><i>gear</i></div>
+    </div>
+    <div class="bars">${bars}</div>
+    <div class="facts">
+      <div class="fact"><i>avg speed</i><b>${speedHistory ? (speedHistory.total / speedHistory.count).toFixed(0) + " km/h" : "&mdash;"}</b></div>
+      <div class="fact"><i>max speed</i><b>${speedHistory ? speedHistory.maximum.toFixed(0) + " km/h" : "&mdash;"}</b></div>
+      <div class="fact"><i>${spare.label}</i><b>${spare.text}</b></div>
+    </div>
+  </div>`;
+}
+
+function sparePeak(carId, sensorId, label, unit) {
+  const history = seen.get(carId + "|" + sensorId);
+  return { label, text: history ? history.maximum.toFixed(0) + " " + unit : "&mdash;" };
+}
+
+function isStale(carId) {
+  const speedHistory = seen.get(carId + "|speed");
+  return !speedHistory || Date.now() - speedHistory.at > STALE_AFTER_MS;
+}
 
 function render() {
   document.getElementById("rollupCount").textContent = rollupCount.toLocaleString();
   document.getElementById("alertCount").textContent = alertCount.toLocaleString();
   document.getElementById("channelCount").textContent = latest.size.toLocaleString();
+  if (latest.size === 0) return;
 
-  const byCar = new Map();
-  for (const [key, value] of latest) {
-    const carId = key.split("|")[0];
-    if (!byCar.has(carId)) byCar.set(carId, []);
-    byCar.get(carId).push(value);
-  }
-  if (byCar.size === 0) return;
+  garageEl.innerHTML = GARAGE.map(driverCard).join("");
 
-  carsEl.innerHTML = "";
-  for (const carId of [...byCar.keys()].sort()) {
-    const card = document.createElement("div");
-    card.className = alerting.has(carId) ? "car alerting" : "car";
-    const rows = byCar.get(carId)
-      .sort((a, b) => a.sensorId.localeCompare(b.sensorId))
-      .slice(0, 8)
-      .map(r => `<div class="row"><span>${r.sensorId}</span><span>${r.average.toFixed(1)}</span></div>`)
-      .join("");
-    card.innerHTML = `<h3>${carId}</h3>${rows}`;
-    carsEl.appendChild(card);
+  const others = new Set();
+  for (const rollup of latest.values()) {
+    if (!DRIVERS[rollup.carId]) others.add(rollup.carId);
   }
+  if (others.size === 0) {
+    stripEl.innerHTML = `<div class="empty">only the Mercedes cars are running</div>`;
+    return;
+  }
+  stripEl.innerHTML = [...others].sort().map(carId => {
+    const speed = reading(carId, "speed");
+    return `<div class="grid-row"><span>${carId}</span><span>${speed ? speed.average.toFixed(0) + " km/h" : "&mdash;"}</span></div>`;
+  }).join("");
 }
 
 function addAlert(alert) {
   alertCount++;
   alerting.add(alert.carId);
   if (alertsEl.querySelector(".empty")) alertsEl.innerHTML = "";
+  const driver = DRIVERS[alert.carId];
+  const who = driver ? `${driver.family} (${alert.carId})` : alert.carId;
   const el = document.createElement("div");
   el.className = "alert";
-  el.innerHTML = `<b>${alert.carId}</b> ${alert.sensorId}
+  el.innerHTML = `<b>${who}</b> ${alert.sensorId}
     <small>max ${alert.observedMaximum.toFixed(1)} &gt; threshold ${alert.threshold.toFixed(1)}</small>
     <small>${new Date(alert.windowStart).toLocaleTimeString()}</small>`;
   alertsEl.prepend(el);
@@ -152,82 +342,153 @@ function connect() {
   const source = new EventSource("/api/v1/live/stream");
   source.onopen = () => { statusEl.textContent = "live"; statusEl.className = "live"; };
   source.onerror = () => { statusEl.textContent = "reconnecting"; statusEl.className = "down"; };
-  source.addEventListener("rollup", e => {
-    const rollup = JSON.parse(e.data);
+  source.addEventListener("rollup", event => {
+    const rollup = JSON.parse(event.data);
     if (rollup.windowLength !== "PT1S") return;
     rollupCount++;
-    latest.set(rollup.carId + "|" + rollup.sensorId, rollup);
+    track(rollup);
   });
-  source.addEventListener("alert", e => addAlert(JSON.parse(e.data)));
+  source.addEventListener("alert", event => addAlert(JSON.parse(event.data)));
 }
 
 async function loadOptions() {
   const [cars, sensors] = await Promise.all([
-    fetch("/api/v1/telemetry/cars").then(r => r.json()).catch(() => []),
-    fetch("/api/v1/telemetry/sensors").then(r => r.json()).catch(() => [])
+    fetch("/api/v1/telemetry/cars").then(response => response.json()).catch(() => []),
+    fetch("/api/v1/telemetry/sensors").then(response => response.json()).catch(() => [])
   ]);
-  fill("carSelect", cars);
-  fill("sensorSelect", sensors);
+
+  const carSelect = document.getElementById("carSelect");
+  carSelect.innerHTML = cars.map(carId => {
+    const driver = DRIVERS[carId];
+    return `<option value="${carId}">${driver ? driver.family + " · " + carId : carId}</option>`;
+  }).join("");
+  const mercedes = cars.find(carId => DRIVERS[carId]);
+  if (mercedes) carSelect.value = mercedes;
+
+  const chipsEl = document.getElementById("chips");
+  const ordered = sensors.slice().sort((left, right) => {
+    const leftAux = left.startsWith("aux-channel-"), rightAux = right.startsWith("aux-channel-");
+    return leftAux === rightAux ? left.localeCompare(right) : (leftAux ? 1 : -1);
+  });
+  chipsEl.innerHTML = ordered.map(sensorId =>
+    `<button type="button" class="chip" data-sensor="${sensorId}">${sensorId}</button>`).join("");
+  chipsEl.querySelectorAll(".chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const sensorId = chip.dataset.sensor;
+      if (selectedSensors.includes(sensorId)) {
+        selectedSensors = selectedSensors.filter(id => id !== sensorId);
+        chip.classList.remove("on");
+      } else if (selectedSensors.length < SERIES_COLOURS.length) {
+        selectedSensors.push(sensorId);
+        chip.classList.add("on");
+      }
+      updateChipNote(sensors.length);
+    });
+  });
+
+  ["speed", "engine-rpm", "throttle-position"].forEach(sensorId => {
+    const chip = chipsEl.querySelector(`[data-sensor="${sensorId}"]`);
+    if (chip) { selectedSensors.push(sensorId); chip.classList.add("on"); }
+  });
+  updateChipNote(sensors.length);
 }
 
-function fill(id, values) {
-  const select = document.getElementById(id);
-  select.innerHTML = values.map(v => `<option>${v}</option>`).join("");
+function updateChipNote(total) {
+  document.getElementById("chipNote").textContent =
+    `${selectedSensors.length} of ${total} channels selected · max ${SERIES_COLOURS.length}`;
 }
 
-function drawChart(rows) {
+function drawChart(series) {
   const canvas = document.getElementById("chart");
+  const plotted = series.filter(entry => entry.rows.length > 0);
+  const laneHeight = 62;
+  const height = Math.max(plotted.length, 1) * laneHeight + 26;
+  canvas.style.height = height + "px";
+
   const scale = window.devicePixelRatio || 1;
-  const width = canvas.clientWidth, height = 220;
+  const width = canvas.clientWidth;
   canvas.width = width * scale; canvas.height = height * scale;
   const context = canvas.getContext("2d");
   context.scale(scale, scale);
   context.clearRect(0, 0, width, height);
-  if (rows.length === 0) return;
+  document.getElementById("legend").innerHTML = "";
+  if (plotted.length === 0) return;
 
-  const values = rows.flatMap(r => [r.minimum, r.maximum]);
-  const low = Math.min(...values), high = Math.max(...values);
-  const span = (high - low) || 1;
-  const x = i => 40 + (i / Math.max(rows.length - 1, 1)) * (width - 60);
-  const y = v => height - 24 - ((v - low) / span) * (height - 48);
+  // Channels driven by the same lap simulation normalise to identical curves, so
+  // overlaying them hides every series but the last. One lane each instead.
+  const left = 8, right = width - 8;
+  const buckets = Math.max(...plotted.map(entry => entry.rows.length));
 
-  context.strokeStyle = "#2a2a45";
-  context.beginPath(); context.moveTo(40, y(low)); context.lineTo(width - 20, y(low));
-  context.moveTo(40, y(high)); context.lineTo(width - 20, y(high)); context.stroke();
+  plotted.forEach((entry, index) => {
+    const colour = SERIES_COLOURS[index % SERIES_COLOURS.length];
+    const laneTop = index * laneHeight + 8;
+    const laneBottom = laneTop + laneHeight - 22;
 
-  context.fillStyle = "#8888a8"; context.font = "11px monospace";
-  context.fillText(high.toFixed(1), 4, y(high) + 4);
-  context.fillText(low.toFixed(1), 4, y(low) + 4);
+    context.strokeStyle = "#1a242b"; context.lineWidth = 1;
+    context.beginPath(); context.moveTo(left, laneBottom + 6); context.lineTo(right, laneBottom + 6); context.stroke();
 
-  context.strokeStyle = "#f0196a"; context.lineWidth = 2; context.beginPath();
-  rows.forEach((r, i) => i === 0 ? context.moveTo(x(i), y(r.average)) : context.lineTo(x(i), y(r.average)));
-  context.stroke();
+    const values = entry.rows.map(row => row.average);
+    const low = Math.min(...values), high = Math.max(...values);
+    const span = (high - low) || 1;
+
+    context.strokeStyle = colour; context.lineWidth = 1.8;
+    context.beginPath();
+    values.forEach((value, position) => {
+      const x = left + (position / Math.max(buckets - 1, 1)) * (right - left);
+      const y = laneBottom - ((value - low) / span) * (laneBottom - laneTop);
+      position === 0 ? context.moveTo(x, y) : context.lineTo(x, y);
+    });
+    context.stroke();
+
+    context.fillStyle = colour; context.font = "10px ui-monospace, monospace";
+    context.fillText(entry.sensorId, left + 2, laneTop + 9);
+    context.fillStyle = "#7b94a1";
+    context.fillText(`${low.toFixed(1)} to ${high.toFixed(1)}`, left + 2, laneBottom + 16);
+  });
+
+  context.fillStyle = "#7b94a1"; context.font = "10px ui-monospace, monospace";
+  const label = "each channel in its own lane, scaled to its own range";
+  context.fillText(label, right - context.measureText(label).width, height - 4);
 }
 
 document.getElementById("queryForm").addEventListener("submit", async event => {
   event.preventDefault();
   const carId = document.getElementById("carSelect").value;
-  const sensorId = document.getElementById("sensorSelect").value;
   const resolution = document.getElementById("resolution").value;
   const note = document.getElementById("queryNote");
-  const started = performance.now();
-  const response = await fetch(
-    `/api/v1/telemetry/rollups?carId=${carId}&sensorId=${sensorId}&resolution=${resolution}`
-    + `&from=${new Date(Date.now() - 86400000).toISOString()}`);
-  if (!response.ok) {
-    note.textContent = "no rollups stored for that channel yet";
+
+  if (selectedSensors.length === 0) {
+    note.textContent = "select at least one channel";
     drawChart([]);
     return;
   }
-  const rows = await response.json();
-  drawChart(rows);
-  note.textContent = `${rows.length} buckets in ${Math.round(performance.now() - started)} ms`;
+
+  const from = new Date(Date.now() - 86400000).toISOString();
+  const started = performance.now();
+  const series = await Promise.all(selectedSensors.map(async sensorId => {
+    const response = await fetch(
+      `/api/v1/telemetry/rollups?carId=${carId}&sensorId=${sensorId}&resolution=${resolution}&from=${from}`);
+    return { sensorId, rows: response.ok ? await response.json() : [] };
+  }));
+  const elapsed = Math.round(performance.now() - started);
+
+  lastRows = series;
+  drawChart(series);
+  const buckets = series.reduce((total, entry) => total + entry.rows.length, 0);
+  note.textContent = buckets === 0
+    ? "no rollups stored for those channels yet"
+    : `${buckets} buckets across ${series.length} channels in ${elapsed} ms`;
 });
 
-fetch("/api/v1/live/alerts").then(r => r.json()).then(list => list.slice().reverse().forEach(addAlert)).catch(() => {});
+window.addEventListener("resize", () => drawChart(lastRows));
+
+fetch("/api/v1/live/alerts")
+  .then(response => response.json())
+  .then(list => list.slice().reverse().forEach(addAlert))
+  .catch(() => {});
 loadOptions();
 connect();
-setInterval(render, 500);
+setInterval(render, 400);
 </script>
 </body>
 </html>
