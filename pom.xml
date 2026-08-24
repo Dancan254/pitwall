@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.0</version>
+		<version>4.1.1</version>
 		<relativePath/>
 	</parent>
 
@@ -20,9 +20,10 @@
 	<properties>
 		<java.version>25</java.version>
 		<!-- The Logback appender has no stable release; it ships only from the
-		     instrumentation -alpha line. 2.21.0-alpha is the release that pairs
-		     with the OpenTelemetry 1.55.0 that Spring Boot 4.0.0 manages. -->
-		<opentelemetry-instrumentation.version>2.21.0-alpha</opentelemetry-instrumentation.version>
+		     instrumentation -alpha line. Keep this in step with the OpenTelemetry
+		     version the Boot BOM manages: 2.28.0-alpha pairs with 1.62.0. No
+		     upgrade recipe knows about this pin, so check it on every Boot bump. -->
+		<opentelemetry-instrumentation.version>2.28.0-alpha</opentelemetry-instrumentation.version>
 	</properties>
 
 	<dependencyManagement>
