@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: pitwall-stream-processor
+  threads:
+    virtual:
+      enabled: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: pitwall-processor
+      auto-offset-reset: earliest
+      properties:
+        max.poll.records: 2000
+        fetch.min.bytes: 65536
+        fetch.max.wait.ms: 50
+    listener:
+      type: batch
+      ack-mode: batch
+      concurrency: 6
+      observation-enabled: true
+    streams:
+      application-id: pitwall-rollups
+      state-dir: ${java.io.tmpdir}/pitwall-kafka-streams
+      properties:
+        num.stream.threads: 3
+        commit.interval.ms: 1000
+        auto.offset.reset: latest
+
+  datasource:
+    url: jdbc:postgresql://localhost:5434/pitwall
+    username: pitwall
+    password: pitwall
+    hikari:
+      maximum-pool-size: 12
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:4328/v1/metrics
+        step: 5s
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4328/v1/traces
+  observations:
+    enable:
+      "[tasks.scheduled.execution]": false
+  tracing:
+    sampling:
+      probability: 0.05
+
+
+pitwall:
+  processor:
+    topic: telemetry.events
+    write-batch-size: 500
+    wire-format: protobuf
+    rollup:
+      topic: telemetry.rollups
+      alert-topic: telemetry.alerts
+      windows: [1s, 1m]
+      grace: 10s
+    alerts:
+      - sensor-id: brake-temperature-front-left
+        maximum: 1050
+      - sensor-id: engine-rpm
+        maximum: 15500
