@@ -1,0 +1,6 @@
+pitwall:
+  source:
+    cars: 20
+    sensors-per-car: 100
+    rate-scale: 1.0
+    log-sample-interval: 200000

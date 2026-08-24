@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: pitwall-source
+  threads:
+    virtual:
+      enabled: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      acks: all
+      compression-type: lz4
+      batch-size: 65536
+      buffer-memory: 134217728
+      properties:
+        linger.ms: 20
+
+  datasource:
+    url: jdbc:postgresql://localhost:5434/pitwall
+    username: pitwall
+    password: pitwall
+    hikari:
+      maximum-pool-size: 10
+      initialization-fail-timeout: -1
+
+  flyway:
+    enabled: false
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:4328/v1/metrics
+        step: 5s
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4328/v1/traces
+  observations:
+    enable:
+      "[tasks.scheduled.execution]": false
+  tracing:
+    sampling:
+      probability: 1.0
+
+
+pitwall:
+  source:
+    cars: 5
+    sensors-per-car: 20
+    rate-scale: 0.1
+    lap-duration-seconds: 90
+    auto-start: true
+    log-sample-interval: 2000
+    sink: kafka
+    wire-format: protobuf
+    dropout:
+      buffer-capacity: 500000
+      overlap-size: 2000
+      replay-batch-size: 5000
+    kafka:
+      topic: telemetry.events
+      partitions: 12
+      replication-factor: 1

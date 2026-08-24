@@ -1,0 +1,8 @@
+pitwall:
+  source:
+    cars: 20
+    sensors-per-car: 300
+    rate-scale: 4.0
+    log-sample-interval: 2000000
+    dropout:
+      buffer-capacity: 2000000
